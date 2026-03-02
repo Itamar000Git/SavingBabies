@@ -4,7 +4,8 @@ import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestRegressor
-from sklearn.metrics import mean_squared_error, r2_score
+from sklearn.metrics import mean_squared_error, r2_score, accuracy_score, precision_score, recall_score, f1_score, \
+    confusion_matrix
 
 # ==========================================
 # 1. הגדרת נתיבים
@@ -90,19 +91,43 @@ y_pred = model.predict(X_test)
 mse = mean_squared_error(y_test, y_pred)
 r2 = r2_score(y_test, y_pred)
 
-print("\n--- Model Evaluation ---")
-print(f"Mean Squared Error (MSE): {mse:.4f}")
-print(f"R^2 Score: {r2:.4f}")
 
-# הצגת חשיבות המאפיינים (Feature Importances)
+# ==========================================
+# 7. Classification metrics (Accuracy/Precision/Recall/F1)
+#    ע"י הגדרת חמצת לפי סף pH
+# ==========================================
+PH_THRESHOLD = 7.05  # אפשר לשנות (למשל 7.10 / 7.15)
+
+# אמת: האם יש חמצת
+y_test_cls = (y_test <= PH_THRESHOLD).astype(int)
+
+# תחזית: האם יש חמצת לפי תחזית pH
+y_pred_cls = (y_pred <= PH_THRESHOLD).astype(int)
+
+acc = accuracy_score(y_test_cls, y_pred_cls)
+pre = precision_score(y_test_cls, y_pred_cls, zero_division=0)
+rec = recall_score(y_test_cls, y_pred_cls, zero_division=0)
+f1  = f1_score(y_test_cls, y_pred_cls, zero_division=0)
+cm  = confusion_matrix(y_test_cls, y_pred_cls)
+
+print("\n--- Classification (derived from pH) ---")
+print(f"Threshold (pathological if pH <= {PH_THRESHOLD})")
+print(f"Accuracy : {acc:.4f}")
+print(f"Precision: {pre:.4f}")
+print(f"Recall   : {rec:.4f}")
+print(f"F1-score : {f1:.4f}")
+print("Confusion matrix [[TN, FP],[FN, TP]]:")
+print(cm)
+
+# ==========================================
+# 8. Feature importances
+# ==========================================
 print("\n--- Feature Importance ---")
-# יצירת טבלה שמסדרת את המאפיינים לפי רמת החשיבות שלהם (מהכי משפיע להכי פחות)
 importances = model.feature_importances_
 feature_importance_df = pd.DataFrame({
     'Feature': X.columns,
     'Importance': importances
 }).sort_values(by='Importance', ascending=False)
 
-for index, row in feature_importance_df.iterrows():
-    # נציג את החשיבות כאחוזים כדי שיהיה קל יותר להבין
+for _, row in feature_importance_df.iterrows():
     print(f"{row['Feature']}: {row['Importance'] * 100:.2f}%")
