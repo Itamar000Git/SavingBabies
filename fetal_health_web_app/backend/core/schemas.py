@@ -4,9 +4,23 @@ from pydantic import BaseModel
 
 
 class PredictionLabel(BaseModel):
-    label: str
+    label: str                          # raw model label ("Healthy", "Risk")
+    display_label: str                  # possibly modified ("Borderline Healthy", etc.)
     confidence: Optional[float] = None
     placeholder: Optional[bool] = None
+
+
+class PredictionReliability(BaseModel):
+    level: str           # "High confidence" | "Low confidence" | "Borderline / Uncertain" | "Not applicable" | "Unknown"
+    message: str
+    recommend_review: bool
+
+
+class GroundTruth(BaseModel):
+    actual_label: Optional[str] = None   # "Healthy" | "Risk" | None
+    ph_value: Optional[float] = None
+    correctness: Optional[str] = None    # "Correct" | "Incorrect" | "Unknown"
+    available: bool = False
 
 
 class BabyMetadata(BaseModel):
@@ -44,17 +58,21 @@ class RecordingMetadata(BaseModel):
 class ImportantParameter(BaseModel):
     name: str
     value: float | str
-    impact: str  # "normal" | "elevated" | "critical"
+    impact: str                          # "normal" | "elevated" | "critical"
+    description: Optional[str] = None   # medical explanation of this parameter
 
 
 class Explanation(BaseModel):
     important_parameters: list[ImportantParameter]
     summary: str
+    missing_signal_warning: Optional[str] = None  # set if missing_signal_pct > 20%
 
 
 class PredictionResponse(BaseModel):
     model_name: str
     prediction: PredictionLabel
+    reliability: PredictionReliability
+    ground_truth: GroundTruth
     metadata: RecordingMetadata
     explanation: Explanation
     signal_features: MedicalMetadata

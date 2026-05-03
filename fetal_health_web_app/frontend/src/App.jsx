@@ -3,11 +3,11 @@ import UploadPanel from './components/UploadPanel'
 import BabyVisual from './components/BabyVisual'
 import ExplanationPanel from './components/ExplanationPanel'
 import MetadataPanel from './components/MetadataPanel'
+import ReliabilityPanel from './components/ReliabilityPanel'
+import GroundTruthPanel from './components/GroundTruthPanel'
 import LoadingOverlay from './components/LoadingOverlay'
 import ErrorBanner from './components/ErrorBanner'
 import { runPrediction } from './api/client'
-
-// States: 'idle' | 'loading' | 'result' | 'error'
 
 export default function App() {
   const [appState, setAppState] = useState('idle')
@@ -34,24 +34,26 @@ export default function App() {
   }
 
   const prediction = result?.prediction ?? null
+  const reliability = result?.reliability ?? null
+  const groundTruth = result?.ground_truth ?? null
   const metadata = result?.metadata ?? null
   const explanation = result?.explanation ?? null
 
   return (
     <div className="app">
       <LoadingOverlay visible={appState === 'loading'} />
-
       <UploadPanel onSubmit={handleSubmit} isLoading={appState === 'loading'} />
-
       <ErrorBanner error={error} onDismiss={handleDismissError} />
 
       <div className="dashboard">
         <div className="left-panel">
           <BabyVisual prediction={prediction} />
+          {reliability && <ReliabilityPanel reliability={reliability} prediction={prediction} />}
           {explanation && <ExplanationPanel explanation={explanation} />}
         </div>
         <div className="right-panel">
           <MetadataPanel metadata={metadata} />
+          {groundTruth && <GroundTruthPanel groundTruth={groundTruth} prediction={prediction} />}
         </div>
       </div>
 

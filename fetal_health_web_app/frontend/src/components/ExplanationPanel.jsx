@@ -10,6 +10,11 @@ export default function ExplanationPanel({ explanation }) {
   return (
     <div className="explanation-panel">
       <h3 className="explanation-title">Why this result?</h3>
+      {explanation.missing_signal_warning && (
+        <div className="missing-signal-warning">
+          ⚠ {explanation.missing_signal_warning}
+        </div>
+      )}
       <table className="params-table">
         <thead>
           <tr>
@@ -22,11 +27,18 @@ export default function ExplanationPanel({ explanation }) {
           {explanation.important_parameters.map((p, i) => {
             const { icon, cls } = IMPACT[p.impact] ?? IMPACT.normal
             return (
-              <tr key={i}>
-                <td>{p.name}</td>
-                <td>{p.value}</td>
-                <td className={cls}>{icon}</td>
-              </tr>
+              <>
+                <tr key={`val-${i}`}>
+                  <td>{p.name}</td>
+                  <td>{p.value}</td>
+                  <td className={cls}>{icon}</td>
+                </tr>
+                {p.description && (
+                  <tr key={`desc-${i}`} className="param-description-row">
+                    <td colSpan={3} className="param-description">{p.description}</td>
+                  </tr>
+                )}
+              </>
             )
           })}
         </tbody>

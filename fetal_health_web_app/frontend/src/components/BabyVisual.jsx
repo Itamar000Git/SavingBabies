@@ -4,6 +4,7 @@ const LABEL_COLOR = {
   risk: '#ef4444',
   danger: '#ef4444',
   suspicious: '#f59e0b',
+  borderline: '#f59e0b',
 }
 
 function getColor(label) {
@@ -16,28 +17,23 @@ function getColor(label) {
 }
 
 export default function BabyVisual({ prediction }) {
-  const color = getColor(prediction?.label)
+  const displayLabel = prediction?.display_label ?? prediction?.label
+  const color = getColor(displayLabel)
 
   return (
     <div className="baby-visual">
       <svg viewBox="0 0 200 320" width="180" height="288" aria-label="Baby silhouette">
-        {/* Head */}
         <ellipse cx="100" cy="52" rx="36" ry="40" fill="none" stroke={color} strokeWidth="3" />
-        {/* Body */}
         <ellipse cx="100" cy="168" rx="52" ry="72" fill="none" stroke={color} strokeWidth="3" />
-        {/* Left arm */}
         <path d="M50 135 Q22 165 18 195" fill="none" stroke={color} strokeWidth="3" strokeLinecap="round" />
-        {/* Right arm */}
         <path d="M150 135 Q178 165 182 195" fill="none" stroke={color} strokeWidth="3" strokeLinecap="round" />
-        {/* Left leg */}
         <path d="M80 235 Q70 270 65 300" fill="none" stroke={color} strokeWidth="3" strokeLinecap="round" />
-        {/* Right leg */}
         <path d="M120 235 Q130 270 135 300" fill="none" stroke={color} strokeWidth="3" strokeLinecap="round" />
       </svg>
 
       {prediction ? (
         <div className="prediction-badge" style={{ borderColor: color, color }}>
-          <span className="prediction-label">{prediction.label}</span>
+          <span className="prediction-label">{displayLabel}</span>
           {prediction.confidence != null && (
             <span className="prediction-confidence">
               {(prediction.confidence * 100).toFixed(1)}% confidence

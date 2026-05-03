@@ -132,6 +132,7 @@ class MiniRocketAdapter(BaseModelAdapter):
             return {
                 "important_parameters": [],
                 "summary": "Placeholder prediction — real model weights are not loaded. Run training/train_minirocket.py first.",
+                "missing_signal_warning": None,
             }
 
         fhr_mean = signal_features.get("fhr_mean") or 0.0
@@ -147,21 +148,25 @@ class MiniRocketAdapter(BaseModelAdapter):
                 "name": "FHR Mean",
                 "value": f"{fhr_mean} bpm",
                 "impact": "normal" if 110 <= fhr_mean <= 160 else "critical",
+                "description": "Average fetal heart rate over the full recording. Normal range: 110–160 bpm. Values outside this range may indicate fetal distress or maternal fever.",
             },
             {
                 "name": "FHR Variability (Std Dev)",
                 "value": f"{fhr_std} bpm",
                 "impact": "elevated" if fhr_std < 5 else "normal",
+                "description": "Standard deviation of fetal heart rate. Low variability (< 5 bpm) may indicate fetal hypoxia, sedation, or sleep cycles.",
             },
             {
                 "name": "Missing Signal",
                 "value": f"{missing_pct}%",
                 "impact": "critical" if missing_pct > 20 else "elevated" if missing_pct > 5 else "normal",
+                "description": "Percentage of the recording with no valid FHR signal (FHR = 0, negative, or missing). High values reduce prediction reliability.",
             },
             {
                 "name": "UC Activity",
                 "value": "Present" if uc_present else "Absent",
                 "impact": "normal",
+                "description": "Uterine contraction activity. Contractions provide additional context for interpreting fetal heart rate decelerations.",
             },
         ]
 
@@ -173,4 +178,8 @@ class MiniRocketAdapter(BaseModelAdapter):
             f"with {round(confidence * 100, 1)}% confidence. {reason}"
         )
 
-        return {"important_parameters": params, "summary": summary}
+        missing_signal_warning = None
+        if missing_pct > 20:
+            missing_signal_warning = "High missing signal may reduce prediction reliability."
+
+        return {"important_parameters": params, "summary": summary, "missing_signal_warning": missing_signal_warning}
