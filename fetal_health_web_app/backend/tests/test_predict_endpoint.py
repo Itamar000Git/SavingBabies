@@ -11,6 +11,14 @@ fhr = np.full(N, 150.0, dtype=np.float32)
 uc = np.full(N, 5.0, dtype=np.float32)
 _SAMPLE_CSV = pd.DataFrame({"t_sec": t, "FHR": fhr, "UC": uc}).to_csv(index=False).encode()
 
+# Build a >90-minute CSV at 4 Hz (21,840 rows) — used to test the too-long rejection path
+_N_LONG = int(91 * 60 * 4)
+_LONG_CSV = pd.DataFrame({
+    "t_sec": np.arange(_N_LONG, dtype=np.float32) * 0.25,
+    "FHR": np.full(_N_LONG, 150.0),
+    "UC": np.full(_N_LONG, 5.0),
+}).to_csv(index=False).encode()
+
 
 @pytest.fixture(scope="module")
 def client():
@@ -54,6 +62,15 @@ def test_predict_minirocket_returns_structure(client):
     )
     assert r.status_code == 200
     body = r.json()
+    assert "prediction" in body
+    assert "label" in body["prediction"]
+    assert "metadata" in body
+    assert "baby" in body["metadata"]
+    assert "mother" in body["metadata"]
+    assert "medical" in body["metadata"]
+    assert "explanation" in body
+    assert "important_parameters" in body["explanation"]
+    assert "summary" in body["explanation"]
     assert body["model_name"] == "MiniROCKET"
 
 
@@ -77,16 +94,9 @@ def test_predict_bad_csv_returns_400(client):
 
 
 def test_predict_too_long_returns_400(client):
-    n = int(91 * 60 * 4)
-    t_long = np.arange(n, dtype=np.float32) * 0.25
-    long_csv = pd.DataFrame({
-        "t_sec": t_long,
-        "FHR": np.full(n, 150.0),
-        "UC": np.full(n, 5.0),
-    }).to_csv(index=False).encode()
     r = client.post(
         "/predict",
         data={"model_name": "binarycnn"},
-        files={"file": ("long.csv", io.BytesIO(long_csv), "text/csv")},
+        files={"file": ("long.csv", io.BytesIO(_LONG_CSV), "text/csv")},
     )
     assert r.status_code == 400
