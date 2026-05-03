@@ -70,3 +70,101 @@ def test_validate_duration_too_long():
     medical = extract_medical_metadata(df)
     with pytest.raises(ValueError, match="too long"):
         validate_duration(medical)
+
+
+
+def _to_csv_bytes(df):
+    return df.to_csv(index=False).encode()
+
+
+def test_all_zero_fhr_is_100_percent_missing_and_mean_is_none():
+    csv_bytes = _to_csv_bytes(pd.DataFrame({
+        "t_sec": [0.0, 0.25, 0.5, 0.75],
+        "FHR": [0.0, 0.0, 0.0, 0.0],
+        "UC": [5.0, 5.0, 5.0, 5.0],
+    }))
+
+    df = parse_csv(csv_bytes)
+    medical = extract_medical_metadata(df)
+
+    assert medical.missing_signal_pct == 100.0
+    assert medical.fhr_mean is None
+    assert medical.fhr_std is None
+
+
+def test_nan_fhr_is_counted_as_missing_signal():
+    csv_bytes = _to_csv_bytes(pd.DataFrame({
+        "t_sec": [0.0, 0.25, 0.5, 0.75],
+        "FHR": [150.0, np.nan, 151.0, 0.0],
+        "UC": [5.0, 5.0, 5.0, 5.0],
+    }))
+
+    df = parse_csv(csv_bytes)
+    medical = extract_medical_metadata(df)
+
+    assert medical.missing_signal_pct == 50.0
+    assert medical.fhr_mean is not None
+    assert abs(medical.fhr_mean - 150.5) < 0.01
+
+
+def test_negative_fhr_is_counted_as_missing_signal():
+    csv_bytes = _to_csv_bytes(pd.DataFrame({
+        "t_sec": [0.0, 0.25, 0.5, 0.75],
+        "FHR": [150.0, -1.0, 151.0, 0.0],
+        "UC": [5.0, 5.0, 5.0, 5.0],
+    }))
+
+    df = parse_csv(csv_bytes)
+    medical = extract_medical_metadata(df)
+
+    assert medical.missing_signal_pct == 50.0
+    assert medical.fhr_mean is not None
+    assert abs(medical.fhr_mean - 150.5) < 0.01
+
+
+def test_uc_available_false_when_all_uc_missing_or_zero():
+    csv_bytes = _to_csv_bytes(pd.DataFrame({
+        "t_sec": [0.0, 0.25, 0.5],
+        "FHR": [140.0, 141.0, 142.0],
+        "UC": [0.0, 0.0, 0.0],
+    }))
+
+    df = parse_csv(csv_bytes)
+    medical = extract_medical_metadata(df)
+
+    assert medical.uc_available is False
+
+
+def test_duration_exactly_90_minutes_is_allowed():
+    csv_bytes = _to_csv_bytes(pd.DataFrame({
+        "t_sec": [0.0, 5400.0],
+        "FHR": [140.0, 141.0],
+        "UC": [5.0, 5.0],
+    }))
+
+    df = parse_csv(csv_bytes)
+    medical = extract_medical_metadata(df)
+
+    assert medical.recording_duration_min == 90.0
+    validate_duration(medical)
+
+
+def test_duration_just_over_90_minutes_is_rejected():
+    csv_bytes = _to_csv_bytes(pd.DataFrame({
+        "t_sec": [0.0, 5401.0],  # 90.017 min — unambiguously over 90 after rounding
+        "FHR": [140.0, 141.0],
+        "UC": [5.0, 5.0],
+    }))
+
+    df = parse_csv(csv_bytes)
+    medical = extract_medical_metadata(df)
+
+    with pytest.raises(ValueError, match="too long"):
+        validate_duration(medical)
+
+
+def test_parse_csv_empty_file_raises_value_error():
+    bad = b""
+
+    with pytest.raises(ValueError):
+        parse_csv(bad)

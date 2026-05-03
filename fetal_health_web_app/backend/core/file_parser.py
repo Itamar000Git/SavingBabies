@@ -24,7 +24,7 @@ def extract_signal_features(df: pd.DataFrame) -> dict:
     if "t_sec" in df.columns:
         t = df["t_sec"].values.astype(np.float64)
         duration_min = round(float(t[-1] - t[0]) / 60.0, 2)
-    missing_mask = (fhr == 0) | np.isnan(fhr)
+    missing_mask = (fhr <= 0) | np.isnan(fhr)
     missing_pct = round(float(missing_mask.mean()) * 100, 2)
     valid_fhr = fhr[~missing_mask]
     fhr_mean = round(float(valid_fhr.mean()), 2) if len(valid_fhr) > 0 else None
