@@ -100,3 +100,39 @@ def test_predict_too_long_returns_400(client):
         files={"file": ("long.csv", io.BytesIO(_LONG_CSV), "text/csv")},
     )
     assert r.status_code == 400
+
+
+def test_signal_features_in_response(client):
+    """Response must include signal_features field with all 5 stats."""
+    r = client.post(
+        "/predict",
+        data={"model_name": "binarycnn"},
+        files={"file": ("test.csv", io.BytesIO(_SAMPLE_CSV), "text/csv")},
+    )
+    assert r.status_code == 200
+    body = r.json()
+    assert "signal_features" in body
+    sf = body["signal_features"]
+    assert "fhr_mean" in sf
+    assert "fhr_std" in sf
+    assert "missing_signal_pct" in sf
+    assert "uc_available" in sf
+    assert "recording_duration_min" in sf
+
+
+def test_medical_and_signal_features_consistent(client):
+    """metadata.medical and signal_features must be identical — single source of truth."""
+    r = client.post(
+        "/predict",
+        data={"model_name": "binarycnn"},
+        files={"file": ("test.csv", io.BytesIO(_SAMPLE_CSV), "text/csv")},
+    )
+    assert r.status_code == 200
+    body = r.json()
+    medical = body["metadata"]["medical"]
+    sf = body["signal_features"]
+    assert sf["fhr_mean"] == medical["fhr_mean"]
+    assert sf["fhr_std"] == medical["fhr_std"]
+    assert sf["missing_signal_pct"] == medical["missing_signal_pct"]
+    assert sf["uc_available"] == medical["uc_available"]
+    assert sf["recording_duration_min"] == medical["recording_duration_min"]

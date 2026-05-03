@@ -27,9 +27,5 @@ class BaseModelAdapter(ABC):
         """
 
     @abstractmethod
-    def explain(self, processed_data: np.ndarray, prediction: dict) -> dict:
-        """
-        Produce a human-readable explanation.
-        Returns {"important_parameters": list[dict], "summary": str}
-        Each parameter dict: {"name": str, "value": float|str, "impact": "normal"|"elevated"|"critical"}
-        """
+    def explain(self, processed_data: np.ndarray, prediction: dict, signal_features: dict) -> dict:
+        """Returns {"important_parameters": [...], "summary": str}"""

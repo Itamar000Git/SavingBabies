@@ -7,12 +7,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from core.schemas import (
     Explanation,
     ImportantParameter,
+    MedicalMetadata,
     ModelsResponse,
     PredictionLabel,
     PredictionResponse,
     RecordingMetadata,
 )
-from core.file_parser import extract_medical_metadata, parse_csv, validate_duration
+from core.file_parser import extract_medical_metadata, extract_signal_features, parse_csv, validate_duration
 from core.hea_parser import parse_hea_file
 from models.registry import MODEL_REGISTRY
 
@@ -58,7 +59,8 @@ async def predict(
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 
-    medical = extract_medical_metadata(df)
+    signal_features = extract_signal_features(df)
+    medical = MedicalMetadata(**signal_features)
     try:
         validate_duration(medical)
     except ValueError as exc:
@@ -73,7 +75,7 @@ async def predict(
     adapter = MODEL_REGISTRY[model_name]
     processed = adapter.preprocess(df)
     prediction = adapter.predict(processed)
-    explanation_data = adapter.explain(processed, prediction)
+    explanation_data = adapter.explain(processed, prediction, signal_features)
 
     return PredictionResponse(
         model_name=adapter.name,
@@ -85,4 +87,5 @@ async def predict(
             ],
             summary=explanation_data["summary"],
         ),
+        signal_features=medical,
     )

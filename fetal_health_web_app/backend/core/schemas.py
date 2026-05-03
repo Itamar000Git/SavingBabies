@@ -6,6 +6,7 @@ from pydantic import BaseModel
 class PredictionLabel(BaseModel):
     label: str
     confidence: Optional[float] = None
+    placeholder: Optional[bool] = None
 
 
 class BabyMetadata(BaseModel):
@@ -56,6 +57,7 @@ class PredictionResponse(BaseModel):
     prediction: PredictionLabel
     metadata: RecordingMetadata
     explanation: Explanation
+    signal_features: MedicalMetadata
 
 
 class ModelsResponse(BaseModel):

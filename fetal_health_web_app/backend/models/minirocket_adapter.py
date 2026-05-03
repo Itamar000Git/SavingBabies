@@ -25,7 +25,6 @@ class MiniRocketAdapter(BaseModelAdapter):
         self._mean: np.ndarray | None = None
         self._std: np.ndarray | None = None
         self._kernels: list[tuple] = []
-        self._last_raw_seq: np.ndarray | None = None
 
     def load_model(self) -> None:
         """Load LogisticRegression weights and regenerate ROCKET kernels (deterministic, seed 42)."""
@@ -115,31 +114,30 @@ class MiniRocketAdapter(BaseModelAdapter):
 
     def preprocess(self, df: pd.DataFrame) -> np.ndarray:
         raw = self._build_raw_sequence(df)
-        self._last_raw_seq = raw.copy()
         if self._mean is not None:
             return (raw - self._mean) / self._std
         return raw
 
     def predict(self, processed_data: np.ndarray) -> dict:
         if self._clf is None:
-            return {"label": "Not available (model not trained)", "confidence": None}
+            return {"label": "Not available (model not trained)", "confidence": None, "placeholder": True}
 
         feats = self._rocket_features(processed_data).reshape(1, -1)
         prob = float(self._clf.predict_proba(feats)[0, 1])
         label = "Risk" if prob >= 0.5 else "Healthy"
         return {"label": label, "confidence": round(prob, 4)}
 
-    def explain(self, processed_data: np.ndarray, prediction: dict) -> dict:
-        raw = self._last_raw_seq if self._last_raw_seq is not None else processed_data
-        fhr_col = raw[:, 0]
-        mask_col = raw[:, 2]
-        uc_col = raw[:, 1]
+    def explain(self, processed_data: np.ndarray, prediction: dict, signal_features: dict) -> dict:
+        if prediction.get("placeholder"):
+            return {
+                "important_parameters": [],
+                "summary": "Placeholder prediction — real model weights are not loaded. Run training/train_minirocket.py first.",
+            }
 
-        missing_pct = round(float((mask_col < 0.5).mean()) * 100, 1)
-        valid_fhr = fhr_col[mask_col > 0.5]
-        fhr_mean = round(float(valid_fhr.mean()), 1) if len(valid_fhr) > 0 else 0.0
-        fhr_std = round(float(valid_fhr.std()), 1) if len(valid_fhr) > 0 else 0.0
-        uc_present = bool(np.any(uc_col > 0))
+        fhr_mean = signal_features.get("fhr_mean") or 0.0
+        fhr_std = signal_features.get("fhr_std") or 0.0
+        missing_pct = signal_features.get("missing_signal_pct") or 0.0
+        uc_present = signal_features.get("uc_available", False)
 
         confidence = prediction.get("confidence") or 0.5
         is_risk = "risk" in prediction["label"].lower() or "danger" in prediction["label"].lower()
@@ -151,7 +149,7 @@ class MiniRocketAdapter(BaseModelAdapter):
                 "impact": "normal" if 110 <= fhr_mean <= 160 else "critical",
             },
             {
-                "name": "FHR Variability",
+                "name": "FHR Variability (Std Dev)",
                 "value": f"{fhr_std} bpm",
                 "impact": "elevated" if fhr_std < 5 else "normal",
             },
@@ -168,7 +166,7 @@ class MiniRocketAdapter(BaseModelAdapter):
         ]
 
         risk_factors = [p["name"] for p in params if p["impact"] in ("elevated", "critical")]
-        reason = f"Elevated indicators: {', '.join(risk_factors)}." if risk_factors else "No significant risk indicators."
+        reason = f"Elevated risk indicators: {', '.join(risk_factors)}." if risk_factors else "No significant risk indicators detected."
 
         summary = (
             f"MiniROCKET classified this recording as {'at risk' if is_risk else 'healthy'} "
