@@ -17,3 +17,15 @@ frontend/dist/
 # IDE
 .idea/
 .vscode/
+.DS_Store
+
+# Pytest cache
+backend/.pytest_cache/
+
+# Vite cache
+frontend/.vite/
+
+# Env files
+.env
+.env.local
+.env.*.local
