@@ -12,11 +12,11 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import (
     classification_report,
     confusion_matrix,
-    average_precision_score,   # PR-AUC (Average Precision)
+    average_precision_score,  # PR-AUC (Average Precision)
     roc_auc_score,
     precision_score,
     recall_score,
-    f1_score
+    f1_score, accuracy_score
 )
 
 # ============================================================
@@ -41,7 +41,7 @@ TARGET_RECALL = 0.70           # we want at least this recall for Danger on VALI
 # pos_weight = (neg/pos) * POS_WEIGHT_MULT
 # bigger -> more recall (usually) but more false alarms
 # smaller -> fewer false alarms but recall can drop
-POS_WEIGHT_MULT = 1.0
+POS_WEIGHT_MULT = 1
 
 # --- Change #1: early stopping based on PR-AUC (not val loss) ---
 PATIENCE = 6
@@ -385,29 +385,58 @@ print("\n--- Threshold selection on VALIDATION ---")
 print(f"Target Recall: {TARGET_RECALL:.2f}")
 print(f"Chosen threshold: {best_thr:.2f} | Val Recall: {best_rec:.3f} | Val Precision: {best_prec:.3f}")
 
-
 # ============================================================
-# 11) TEST EVALUATION + PR-AUC + ROC-AUC
+# 11) TEST EVALUATION - CLEAR SUMMARY
 # ============================================================
 
-print("\n--- Evaluating on TEST set ---")
+print("\n" + "=" * 55)
+print("TEST RESULTS SUMMARY")
+print("=" * 55)
 
 test_true, test_prob = get_probs_and_labels(test_loader)
 test_pred = [1 if p >= best_thr else 0 for p in test_prob]
 
-print("\nConfusion Matrix [[TN, FP], [FN, TP]]:")
-print(confusion_matrix(test_true, test_pred))
+# Confusion matrix: labels=[0, 1] means Normal first, Danger second
+cm = confusion_matrix(test_true, test_pred, labels=[0, 1])
+tn, fp, fn, tp = cm.ravel()
 
-print("\nClassification Report (using chosen threshold):")
-print(classification_report(test_true, test_pred, target_names=["Normal", "Danger"], zero_division=0))
+accuracy = accuracy_score(test_true, test_pred)
 
-# PR-AUC (new metric)
+# Positive class = Danger = 1
+danger_precision = precision_score(test_true, test_pred, pos_label=1, zero_division=0)
+danger_recall = recall_score(test_true, test_pred, pos_label=1, zero_division=0)
+danger_f1 = f1_score(test_true, test_pred, pos_label=1, zero_division=0)
+
+
+
+print(f"Decision threshold: {best_thr:.2f}")
+print()
+
+print("Confusion Matrix:")
+print(f"TN = {tn} | FP = {fp}")
+print(f"FN = {fn} | TP = {tp}")
+print()
+
+print("Main Metrics:")
+print(f"Accuracy:          {accuracy:.3f}")
+print(f"Danger Precision:  {danger_precision:.3f}")
+print(f"Danger Recall:     {danger_recall:.3f}")
+print(f"Danger F1-score:   {danger_f1:.3f}")
+print()
+
+
+print("Medical Risk View:")
+print(f"False Negatives - Danger predicted as Normal: {fn}")
+print()
+
+# Optional ranking metrics
 test_pr_auc = average_precision_score(test_true, test_prob)
-print(f"\nTEST PR-AUC (Average Precision): {test_pr_auc:.4f}")
+print(f"PR-AUC:            {test_pr_auc:.3f}")
 
-# ROC-AUC (optional)
 if len(set(test_true)) == 2:
     test_roc_auc = roc_auc_score(test_true, test_prob)
-    print(f"TEST ROC-AUC: {test_roc_auc:.4f}")
+    print(f"ROC-AUC:           {test_roc_auc:.3f}")
 else:
-    print("TEST ROC-AUC: not defined (only one class in test)")
+    print("ROC-AUC:           not defined")
+
+print("=" * 55)
