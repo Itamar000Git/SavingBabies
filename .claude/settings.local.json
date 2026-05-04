@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(Out-File *)",
+      "PowerShell(pip list *)",
+      "Bash(python *)",
+      "Bash(Get-ChildItem -Path fetal_health_web_app -Recurse -Directory)",
+      "Bash(Select-Object -ExpandProperty FullName)",
+      "Bash(git *)",
+      "Bash(python3)",
+      "Bash(npm create *)",
+      "Bash(Remove-Item -Recurse -Force frontend)",
+      "PowerShell(New-Item *)",
+      "Bash(pytest -v)",
+      "Bash(dir *)"
+    ]
+  }
+}

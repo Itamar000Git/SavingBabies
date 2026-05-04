@@ -89,3 +89,59 @@ def test_missing_file_returns_defaults():
     assert baby.baby_id == "9999"
     assert baby.gestational_weeks is None
     assert mother.mother_age is None
+
+def test_parse_hea_missing_fields_return_none(tmp_path):
+    p = tmp_path / "2001.hea"
+    p.write_text("""\
+2001 2 4 19200
+2001.dat 16 100(0)/bpm 12 0 15050 20101 0 FHR
+2001.dat 16 100/nd 12 0 700 378 0 UC
+""")
+
+    baby, mother = parse_hea_file(str(p), "2001")
+
+    assert baby.baby_id == "2001"
+    assert baby.gestational_weeks is None
+    assert baby.weight_g is None
+    assert mother.mother_age is None
+    assert mother.diabetes is None
+
+
+def test_parse_hea_sex_male(tmp_path):
+    p = tmp_path / "2002.hea"
+    p.write_text("""\
+#Gest. weeks  38
+#Sex          1
+""")
+
+    baby, _ = parse_hea_file(str(p), "2002")
+
+    assert baby.sex == "Male"
+
+
+def test_parse_hea_unknown_sex_returns_unknown_or_none(tmp_path):
+    p = tmp_path / "2003.hea"
+    p.write_text("""\
+#Gest. weeks  38
+#Sex          9
+""")
+
+    baby, _ = parse_hea_file(str(p), "2003")
+
+    assert baby.sex in ("Unknown", None)
+
+
+def test_parse_hea_boolean_values_are_parsed_correctly(tmp_path):
+    p = tmp_path / "2004.hea"
+    p.write_text("""\
+#Diabetes     0
+#Hypertension 1
+#Preeclampsia 0
+""")
+
+    _, mother = parse_hea_file(str(p), "2004")
+
+
+    assert mother.diabetes is False
+    assert mother.hypertension is True
+    assert mother.preeclampsia is False
