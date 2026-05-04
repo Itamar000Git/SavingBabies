@@ -60,3 +60,34 @@ def test_display_label_at_boundary_060_unchanged():
 def test_display_label_placeholder_unchanged():
     pred = {"label": "Not available", "confidence": None, "placeholder": True}
     assert get_display_label(pred) == "Not available"
+
+
+# --- BinaryCNN risk_score path ---
+
+def _binarycnn_pred(risk_score, label):
+    return {"label": label, "risk_score": risk_score, "threshold": 0.55, "healthy_cutoff": 0.45, "danger_cutoff": 0.65}
+
+
+def test_risk_score_danger_label():
+    r = compute_reliability(_binarycnn_pred(0.72, "Danger"))
+    assert r["level"] == "Danger"
+    assert r["recommend_review"] is True
+    assert "72.0%" in r["message"]
+
+
+def test_risk_score_borderline_label():
+    r = compute_reliability(_binarycnn_pred(0.52, "Borderline"))
+    assert r["level"] == "Borderline / Uncertain"
+    assert r["recommend_review"] is True
+
+
+def test_risk_score_healthy_label():
+    r = compute_reliability(_binarycnn_pred(0.30, "Healthy"))
+    assert r["level"] == "Healthy"
+    assert r["recommend_review"] is False
+
+
+def test_risk_score_display_label_unchanged():
+    for label in ("Healthy", "Borderline", "Danger"):
+        pred = _binarycnn_pred(0.5, label)
+        assert get_display_label(pred) == label

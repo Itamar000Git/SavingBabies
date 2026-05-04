@@ -145,7 +145,7 @@ def test_prediction_label_is_one_of_allowed_labels(client, model_name):
     if body["prediction"].get("placeholder"):
         pytest.skip("Skipped in placeholder mode — placeholder label is expected until weights are trained")
 
-    allowed_labels = {"Normal", "Danger", "Healthy", "Risk", "Suspicious", "Pathological"}
+    allowed_labels = {"Normal", "Danger", "Healthy", "Risk", "Borderline", "Suspicious", "Pathological"}
     assert body["prediction"]["label"] in allowed_labels
 
 
@@ -178,3 +178,27 @@ def test_predict_missing_file_returns_validation_error(client):
     )
 
     assert r.status_code in (400, 422)
+
+
+@pytest.mark.parametrize("model_name", ["binarycnn", "minirocket"])
+def test_prediction_risk_score_is_valid_when_present(client, model_name):
+    csv_data = _csv_bytes([150.0] * 1200)
+
+    r = client.post(
+        "/predict",
+        data={"model_name": model_name},
+        files={"file": ("test.csv", io.BytesIO(csv_data), "text/csv")},
+    )
+
+    assert r.status_code == 200
+    body = r.json()
+
+    risk_score = body["prediction"].get("risk_score")
+    if risk_score is not None:
+        assert 0.0 <= risk_score <= 1.0
+        assert body["prediction"].get("threshold") is not None
+        assert body["prediction"].get("healthy_cutoff") is not None
+        assert body["prediction"].get("danger_cutoff") is not None
+        healthy_cutoff = body["prediction"]["healthy_cutoff"]
+        danger_cutoff = body["prediction"]["danger_cutoff"]
+        assert healthy_cutoff < danger_cutoff

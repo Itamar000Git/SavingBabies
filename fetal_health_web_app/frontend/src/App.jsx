@@ -4,6 +4,7 @@ import BabyVisual from './components/BabyVisual'
 import ExplanationPanel from './components/ExplanationPanel'
 import MetadataPanel from './components/MetadataPanel'
 import ReliabilityPanel from './components/ReliabilityPanel'
+import RiskScorePanel from './components/RiskScorePanel'
 import GroundTruthPanel from './components/GroundTruthPanel'
 import LoadingOverlay from './components/LoadingOverlay'
 import ErrorBanner from './components/ErrorBanner'
@@ -48,7 +49,9 @@ export default function App() {
       <div className="dashboard">
         <div className="left-panel">
           <BabyVisual prediction={prediction} />
-          {reliability && <ReliabilityPanel reliability={reliability} prediction={prediction} />}
+          {prediction?.risk_score != null
+            ? <RiskScorePanel prediction={prediction} />
+            : reliability && <ReliabilityPanel reliability={reliability} prediction={prediction} />}
           {explanation && <ExplanationPanel explanation={explanation} />}
         </div>
         <div className="right-panel">

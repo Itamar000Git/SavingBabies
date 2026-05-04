@@ -98,6 +98,10 @@ async def predict(
             label=prediction["label"],
             display_label=display_label,
             confidence=prediction.get("confidence"),
+            risk_score=prediction.get("risk_score"),
+            threshold=prediction.get("threshold"),
+            healthy_cutoff=prediction.get("healthy_cutoff"),
+            danger_cutoff=prediction.get("danger_cutoff"),
             placeholder=prediction.get("placeholder"),
         ),
         reliability=PredictionReliability(**reliability_data),
@@ -108,6 +112,7 @@ async def predict(
                 ImportantParameter(**p) for p in explanation_data["important_parameters"]
             ],
             summary=explanation_data["summary"],
+            table_note=explanation_data.get("table_note"),
             missing_signal_warning=explanation_data.get("missing_signal_warning"),
         ),
         signal_features=medical,

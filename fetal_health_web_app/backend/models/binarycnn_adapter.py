@@ -117,7 +117,7 @@ class BinaryCNNAdapter(BaseModelAdapter):
 
     def predict(self, processed_data: np.ndarray) -> dict:
         if self._model is None:
-            return {"label": "Not available (model not trained)", "confidence": None, "placeholder": True}
+            return {"label": "Not available (model not trained)", "risk_score": None, "placeholder": True}
 
         tensor = (
             torch.tensor(processed_data, dtype=torch.float32)
@@ -128,14 +128,31 @@ class BinaryCNNAdapter(BaseModelAdapter):
             logit = self._model(tensor)
             prob = float(torch.sigmoid(logit).item())
 
-        label = "Risk" if prob >= self._threshold else "Healthy"
-        return {"label": label, "confidence": round(prob, 4)}
+        margin = 0.10
+        healthy_cutoff = round(self._threshold - margin, 4)
+        danger_cutoff = round(self._threshold + margin, 4)
+
+        if prob >= danger_cutoff:
+            label = "Danger"
+        elif prob <= healthy_cutoff:
+            label = "Healthy"
+        else:
+            label = "Borderline"
+
+        return {
+            "label": label,
+            "risk_score": round(prob, 4),
+            "threshold": self._threshold,
+            "healthy_cutoff": healthy_cutoff,
+            "danger_cutoff": danger_cutoff,
+        }
 
     def explain(self, processed_data: np.ndarray, prediction: dict, signal_features: dict) -> dict:
         if prediction.get("placeholder"):
             return {
                 "important_parameters": [],
                 "summary": "Placeholder prediction — real model weights are not loaded. Run training/train_binarycnn.py first.",
+                "table_note": None,
                 "missing_signal_warning": None,
             }
 
@@ -143,9 +160,6 @@ class BinaryCNNAdapter(BaseModelAdapter):
         fhr_std = signal_features.get("fhr_std") or 0.0
         missing_pct = signal_features.get("missing_signal_pct") or 0.0
         uc_present = signal_features.get("uc_available", False)
-
-        confidence = prediction.get("confidence") or 0.5
-        is_risk = "risk" in prediction["label"].lower() or "danger" in prediction["label"].lower()
 
         params = [
             {
@@ -174,16 +188,28 @@ class BinaryCNNAdapter(BaseModelAdapter):
             },
         ]
 
-        risk_factors = [p["name"] for p in params if p["impact"] in ("elevated", "critical")]
-        reason = f"Elevated risk indicators: {', '.join(risk_factors)}." if risk_factors else "No significant risk indicators detected."
+        label = prediction.get("label", "")
 
         summary = (
-            f"BinaryCNN classified this recording as {'at risk' if is_risk else 'healthy'} "
-            f"with {round(confidence * 100, 1)}% confidence. {reason}"
+            "The model estimates the probability that this recording belongs to the low-pH risk group. "
+            "The CNN decision is based on the full CTG signal pattern, including fetal heart rate, "
+            "uterine contractions, and missing-signal mask. "
+            "The table shows summary indicators for interpretability, "
+            "but these are not the only inputs used by the CNN."
         )
+        if label == "Borderline":
+            summary += (
+                " Because the risk score is close to the decision threshold, "
+                "this result is treated as borderline rather than a confident Healthy/Danger classification."
+            )
 
         missing_signal_warning = None
         if missing_pct > 20:
             missing_signal_warning = "High missing signal may reduce prediction reliability."
 
-        return {"important_parameters": params, "summary": summary, "missing_signal_warning": missing_signal_warning}
+        return {
+            "important_parameters": params,
+            "summary": summary,
+            "table_note": "Summary indicators — not the only inputs used by the CNN.",
+            "missing_signal_warning": missing_signal_warning,
+        }

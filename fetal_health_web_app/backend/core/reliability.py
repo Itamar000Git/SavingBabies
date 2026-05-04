@@ -3,7 +3,6 @@ from __future__ import annotations
 
 def compute_reliability(prediction: dict) -> dict:
     """Compute reliability level and message from a prediction dict."""
-    confidence = prediction.get("confidence")
     label = prediction.get("label", "")
 
     if prediction.get("placeholder"):
@@ -16,6 +15,30 @@ def compute_reliability(prediction: dict) -> dict:
             "recommend_review": True,
         }
 
+    # BinaryCNN: risk_score + margin-based label (Healthy / Borderline / Danger)
+    if prediction.get("risk_score") is not None:
+        risk_pct = round(prediction["risk_score"] * 100, 1)
+        if label == "Danger":
+            return {
+                "level": "Danger",
+                "message": f"Risk score is {risk_pct}% — above the danger cutoff. Immediate clinical review recommended.",
+                "recommend_review": True,
+            }
+        elif label == "Borderline":
+            return {
+                "level": "Borderline / Uncertain",
+                "message": f"Risk score is {risk_pct}% — within the borderline range. Further review recommended.",
+                "recommend_review": True,
+            }
+        else:
+            return {
+                "level": "Healthy",
+                "message": f"Risk score is {risk_pct}% — below the healthy cutoff. Continue routine monitoring.",
+                "recommend_review": False,
+            }
+
+    # Confidence-based models (MiniROCKET)
+    confidence = prediction.get("confidence")
     if confidence is None:
         return {
             "level": "Unknown",

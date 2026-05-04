@@ -15,6 +15,9 @@ export default function ExplanationPanel({ explanation }) {
           ⚠ {explanation.missing_signal_warning}
         </div>
       )}
+      {explanation.table_note && (
+        <p className="table-note">{explanation.table_note}</p>
+      )}
       <table className="params-table">
         <thead>
           <tr>

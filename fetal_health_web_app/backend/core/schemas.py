@@ -4,9 +4,13 @@ from pydantic import BaseModel
 
 
 class PredictionLabel(BaseModel):
-    label: str                          # raw model label ("Healthy", "Risk")
-    display_label: str                  # possibly modified ("Borderline Healthy", etc.)
-    confidence: Optional[float] = None
+    label: str                           # raw model label ("Healthy", "Danger", "Borderline", "Risk")
+    display_label: str                   # possibly modified for low-confidence models
+    confidence: Optional[float] = None  # MiniROCKET: P(Risk), range 0-1
+    risk_score: Optional[float] = None  # BinaryCNN: P(Danger), range 0-1
+    threshold: Optional[float] = None   # BinaryCNN: decision threshold loaded from stats
+    healthy_cutoff: Optional[float] = None  # threshold - 0.10
+    danger_cutoff: Optional[float] = None   # threshold + 0.10
     placeholder: Optional[bool] = None
 
 
@@ -65,6 +69,7 @@ class ImportantParameter(BaseModel):
 class Explanation(BaseModel):
     important_parameters: list[ImportantParameter]
     summary: str
+    table_note: Optional[str] = None              # describes the parameter table's role
     missing_signal_warning: Optional[str] = None  # set if missing_signal_pct > 20%
 
 
