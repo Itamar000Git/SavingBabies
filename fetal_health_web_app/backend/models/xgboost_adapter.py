@@ -8,8 +8,100 @@ from models.base_adapter import BaseModelAdapter
 
 _WEIGHTS_DIR = os.path.join(os.path.dirname(__file__), "..", "weights")
 
-SEQ_LEN = 1200   # 5 minutes @ 4 Hz — must match training config
 MARGIN = 0.10
+FS = 4  # Hz
+
+# Window sizes in samples — must match training
+WINDOWS = {
+    "last5":  1200,   # 5 min
+    "last10": 2400,   # 10 min
+    "last20": 4800,   # 20 min
+    "full":   None,   # entire recording
+}
+
+
+def _clean_fhr(fhr_raw: np.ndarray) -> np.ndarray:
+    return (
+        pd.Series(fhr_raw.astype(np.float32))
+        .replace(0, np.nan)
+        .mask(pd.Series(fhr_raw.astype(np.float32)) < 0, np.nan)
+        .interpolate()
+        .fillna(140)
+        .values.astype(np.float32)
+    )
+
+
+def _clean_uc(uc_raw: np.ndarray) -> np.ndarray:
+    return (
+        pd.Series(uc_raw.astype(np.float32))
+        .interpolate()
+        .fillna(0)
+        .values.astype(np.float32)
+    )
+
+
+def _window_features(prefix: str, fhr_raw: np.ndarray, uc_raw: np.ndarray, n: int | None) -> dict:
+    """
+    Compute all 20 per-window features from raw (uncleaned) arrays.
+    n=None means use the full array.  n>len → pad with edge values.
+    Feature names must match training: {prefix}_{feature}.
+    """
+    total = len(fhr_raw)
+
+    if n is None:
+        raw_fhr_w = fhr_raw
+        raw_uc_w = uc_raw
+    elif total >= n:
+        raw_fhr_w = fhr_raw[-n:]
+        raw_uc_w = uc_raw[-n:]
+    else:
+        pad = n - total
+        raw_fhr_w = np.pad(fhr_raw, (0, pad), mode="edge")
+        raw_uc_w = np.pad(uc_raw, (0, pad), mode="edge")
+
+    # Missing-signal mask on RAW values (before interpolation)
+    missing_mask = (raw_fhr_w <= 0) | np.isnan(raw_fhr_w)
+    missing_pct = float(missing_mask.mean() * 100)
+    valid_ratio = float(1.0 - missing_mask.mean())
+
+    # Cleaned arrays for feature computation
+    fhr = _clean_fhr(raw_fhr_w)
+    uc = _clean_uc(raw_uc_w)
+
+    baseline = float(np.median(fhr))
+    t = np.arange(len(fhr), dtype=np.float64)
+
+    # Long-term variability: mean std across 30-second segments
+    seg = FS * 30  # 120 samples @ 4 Hz
+    ltv_segs = [np.std(fhr[i: i + seg]) for i in range(0, len(fhr) - seg, seg)]
+    ltv = float(np.mean(ltv_segs)) if ltv_segs else float(np.std(fhr))
+
+    accel = int(np.sum(fhr > baseline + 15))
+    decel = int(np.sum(fhr < baseline - 15))
+    n_pts = len(fhr)
+
+    return {
+        f"{prefix}_fhr_mean":           float(np.mean(fhr)),
+        f"{prefix}_fhr_std":            float(np.std(fhr)),
+        f"{prefix}_fhr_min":            float(np.min(fhr)),
+        f"{prefix}_fhr_max":            float(np.max(fhr)),
+        f"{prefix}_fhr_range":          float(np.max(fhr) - np.min(fhr)),
+        f"{prefix}_fhr_p05":            float(np.percentile(fhr, 5)),
+        f"{prefix}_fhr_p95":            float(np.percentile(fhr, 95)),
+        f"{prefix}_fhr_slope":          float(np.polyfit(t, fhr, 1)[0]),
+        f"{prefix}_stv":                float(np.mean(np.abs(np.diff(fhr)))),
+        f"{prefix}_ltv":                ltv,
+        f"{prefix}_accelerations":      accel,
+        f"{prefix}_decelerations":      decel,
+        f"{prefix}_acceleration_ratio": accel / n_pts,
+        f"{prefix}_deceleration_ratio": decel / n_pts,
+        f"{prefix}_uc_mean":            float(np.mean(uc)),
+        f"{prefix}_uc_std":             float(np.std(uc)),
+        f"{prefix}_uc_max":             float(np.max(uc)),
+        f"{prefix}_uc_activity_ratio":  float(np.mean(uc > 0)),
+        f"{prefix}_missing_signal_pct": missing_pct,
+        f"{prefix}_valid_fhr_ratio":    valid_ratio,
+    }
 
 
 class XGBoostAdapter(BaseModelAdapter):
@@ -21,7 +113,6 @@ class XGBoostAdapter(BaseModelAdapter):
         self._feature_names: list[str] = []
 
     def load_model(self) -> None:
-        """Load model from weights/xgboost_model.joblib. Placeholder mode if missing."""
         model_path = os.path.join(_WEIGHTS_DIR, "xgboost_model.joblib")
         stats_path = os.path.join(_WEIGHTS_DIR, "xgboost_stats.json")
 
@@ -39,63 +130,6 @@ class XGBoostAdapter(BaseModelAdapter):
         self._feature_names = stats["feature_names"]
         print(f"[XGBoostAdapter] Loaded model (threshold={self._threshold:.3f}, "
               f"{len(self._feature_names)} features)")
-
-    # ------------------------------------------------------------------
-    # Feature extraction — must exactly mirror XGBoost_Classifier.py
-    # ------------------------------------------------------------------
-
-    def _build_window(self, df: pd.DataFrame) -> tuple[np.ndarray, np.ndarray]:
-        """Return (fhr, uc) arrays of length SEQ_LEN, cleaned and windowed."""
-        fhr_raw = df["FHR"].values.astype(np.float32)
-        uc_raw = df["UC"].values.astype(np.float32)
-
-        fhr_clean = (
-            pd.Series(fhr_raw)
-            .replace(0, np.nan)
-            .mask(pd.Series(fhr_raw) < 0, np.nan)
-            .interpolate()
-            .fillna(140)
-            .values.astype(np.float32)
-        )
-        uc_clean = (
-            pd.Series(uc_raw).interpolate().fillna(0).values.astype(np.float32)
-        )
-
-        n = len(fhr_clean)
-        if n >= SEQ_LEN:
-            return fhr_clean[-SEQ_LEN:], uc_clean[-SEQ_LEN:]
-
-        pad = SEQ_LEN - n
-        return (
-            np.pad(fhr_clean, (0, pad), constant_values=140.0),
-            np.pad(uc_clean, (0, pad), constant_values=0.0),
-        )
-
-    @staticmethod
-    def _ctg_features(fhr: np.ndarray, uc: np.ndarray) -> dict:
-        baseline = float(np.median(fhr))
-        t = np.arange(len(fhr))
-
-        window = 120
-        ltv_segs = [np.std(fhr[i: i + window]) for i in range(0, len(fhr) - window, window)]
-        ltv = float(np.mean(ltv_segs)) if ltv_segs else float(np.std(fhr))
-
-        return {
-            "fhr_mean":      float(np.mean(fhr)),
-            "fhr_std":       float(np.std(fhr)),
-            "fhr_min":       float(np.min(fhr)),
-            "fhr_max":       float(np.max(fhr)),
-            "fhr_p05":       float(np.percentile(fhr, 5)),
-            "fhr_p95":       float(np.percentile(fhr, 95)),
-            "fhr_slope":     float(np.polyfit(t, fhr, 1)[0]),
-            "stv":           float(np.mean(np.abs(np.diff(fhr)))),
-            "ltv":           ltv,
-            "accelerations": int(np.sum(fhr > baseline + 15)),
-            "decelerations": int(np.sum(fhr < baseline - 15)),
-            "uc_mean":       float(np.mean(uc)),
-            "uc_std":        float(np.std(uc)),
-            "uc_max":        float(np.max(uc)),
-        }
 
     @staticmethod
     def _metadata_features(baby, mother) -> dict:
@@ -115,7 +149,7 @@ class XGBoostAdapter(BaseModelAdapter):
             "diabetes":          to_f(getattr(mother, "diabetes",          None)),
             "hypertension":      to_f(getattr(mother, "hypertension",      None)),
             "preeclampsia":      to_f(getattr(mother, "preeclampsia",      None)),
-            # Fields not yet parsed from .hea — XGBoost handles NaN natively
+            # Not yet parsed from .hea — XGBoost handles NaN natively
             "liq_praecox":   np.nan,
             "pyrexia":        np.nan,
             "meconium":       np.nan,
@@ -124,14 +158,16 @@ class XGBoostAdapter(BaseModelAdapter):
         }
 
     def preprocess(self, df: pd.DataFrame, **context) -> np.ndarray:
-        """Build the ordered feature vector expected by the trained XGBoost model."""
-        fhr, uc = self._build_window(df)
-        combined = {
-            **self._ctg_features(fhr, uc),
-            **self._metadata_features(context.get("baby"), context.get("mother")),
-        }
+        fhr_raw = df["FHR"].values.astype(np.float32)
+        uc_raw = df["UC"].values.astype(np.float32)
 
-        # Order must match training — fill any unknown name with NaN
+        combined: dict = {}
+        for prefix, n_samples in WINDOWS.items():
+            combined.update(_window_features(prefix, fhr_raw, uc_raw, n_samples))
+
+        combined.update(self._metadata_features(context.get("baby"), context.get("mother")))
+
+        # Order must exactly match training; unknown names → NaN (safe for XGBoost)
         vec = np.array(
             [combined.get(name, np.nan) for name in self._feature_names],
             dtype=np.float64,
@@ -142,10 +178,12 @@ class XGBoostAdapter(BaseModelAdapter):
         if self._model is None:
             return {"label": "Not available (model not trained)", "risk_score": None, "placeholder": True}
 
-        prob = float(self._model.predict_proba(processed_data.reshape(1, -1))[:, 1])
+        proba = self._model.predict_proba(processed_data.reshape(1, -1))
+        prob = float(proba[0, 1])
 
-        healthy_cutoff = round(self._threshold - MARGIN, 4)
-        danger_cutoff = round(self._threshold + MARGIN, 4)
+        margin = MARGIN
+        healthy_cutoff = round(self._threshold - margin, 4)
+        danger_cutoff = round(self._threshold + margin, 4)
 
         if prob >= danger_cutoff:
             label = "Danger"
@@ -217,12 +255,12 @@ class XGBoostAdapter(BaseModelAdapter):
 
         label = prediction.get("label", "")
         summary = (
-            "XGBoost estimates the probability of low-pH fetal risk using handcrafted CTG features "
-            "(heart rate statistics, variability, accelerations, decelerations, UC) "
-            "and available clinical metadata (gestational age, maternal conditions). "
-            "The table shows key signal summary indicators. "
-            "Additional features computed from the signal (percentiles, slope, short- and long-term "
-            "variability) and metadata fields are used internally but not listed here."
+            "XGBoost estimates the probability of low-pH fetal risk. "
+            "It uses 80 CTG signal features computed across four time windows "
+            "(last 5, 10, 20 minutes and the full recording), covering heart rate statistics, "
+            "variability, accelerations, decelerations, and uterine contractions, "
+            "plus available clinical metadata. "
+            "The table shows key signal summary indicators from the full recording."
         )
         if label == "Borderline":
             summary += (
@@ -237,6 +275,6 @@ class XGBoostAdapter(BaseModelAdapter):
         return {
             "important_parameters": params,
             "summary": summary,
-            "table_note": "Summary indicators — additional CTG features and clinical metadata are also used.",
+            "table_note": "Summary indicators — XGBoost also uses 80 multi-window CTG features internally.",
             "missing_signal_warning": missing_signal_warning,
         }
