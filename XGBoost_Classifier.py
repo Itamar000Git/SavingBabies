@@ -30,14 +30,25 @@ CSV_DIR = "csv_output"
 DATASET_DIR = "dataset"
 PH_FILE = "dataset/ph_levels.csv"
 
-SEQ_LEN = 1200                 # 5 minutes at 4Hz
 FS = 4
-
-PH_DANGER_THRESHOLD = 7.10     # label: Danger if pH < 7.10
-TARGET_RECALL = 0.70           # choose threshold on validation to reach this Danger recall
+PH_DANGER_THRESHOLD = 7.10
+TARGET_RECALL = 0.60
 
 RANDOM_STATE = 42
 PRINT_EVERY = 50
+
+# Minimum threshold, to avoid a useless threshold like 0.01
+MIN_THRESHOLD = 0.05
+MAX_THRESHOLD = 0.95
+
+# Multi-window feature extraction
+# None means full recording.
+WINDOWS = {
+    "last5": 5 * 60 * FS,
+    "last10": 10 * 60 * FS,
+    "last20": 20 * 60 * FS,
+    "full": None,
+}
 
 # Web app artifacts
 WEIGHTS_DIR = Path("fetal_health_web_app") / "backend" / "weights"
@@ -50,11 +61,6 @@ STATS_PATH = WEIGHTS_DIR / "xgboost_stats.json"
 # ============================================================
 # REAL-TIME SAFE METADATA
 # ============================================================
-# Use only fields that are reasonably available before/during labor.
-# Do NOT use outcome/leakage fields:
-# pH, BDecf, pCO2, BE, Apgar1, Apgar5, NICU days, Seizures,
-# HIE, Intubation, Main diag., Other diag., Sig2Birth, Deliv. type,
-# and real birth Weight(g).
 
 META_FEATURES = [
     ("gestational_weeks", "Gest. weeks"),
@@ -97,11 +103,31 @@ def last_window_or_pad(arr, seq_len, pad):
     return np.pad(arr, (0, diff), constant_values=pad)
 
 
+def take_window(arr, window_len, pad_value):
+    """
+    If window_len is None, return the full array.
+    Otherwise return last window_len samples, padded if needed.
+    """
+    arr = arr.astype(np.float32)
+
+    if window_len is None:
+        return arr
+
+    return last_window_or_pad(arr, window_len, pad_value)
+
+
 def clean_fhr(fhr):
+    """
+    FHR cleaning:
+    - 0, negative values, NaN are invalid.
+    - interpolate invalid values.
+    - fallback to 140 bpm.
+    """
+    fhr = np.asarray(fhr, dtype=np.float32)
+
     return (
         pd.Series(fhr)
-        .replace(0, np.nan)
-        .mask(lambda s: s < 0, np.nan)
+        .mask((fhr <= 0) | np.isnan(fhr), np.nan)
         .interpolate()
         .fillna(140)
         .values.astype(np.float32)
@@ -109,6 +135,13 @@ def clean_fhr(fhr):
 
 
 def clean_uc(uc):
+    """
+    UC cleaning:
+    - zeros can be real.
+    - only NaN values are interpolated/fillna.
+    """
+    uc = np.asarray(uc, dtype=np.float32)
+
     return (
         pd.Series(uc)
         .interpolate()
@@ -133,7 +166,7 @@ def read_realtime_metadata(record_id):
     Reads dataset/{record_id}.hea and extracts only real-time-safe metadata.
 
     Missing fields are returned as np.nan.
-    XGBoost can handle missing values, and we also save which metadata fields were used.
+    XGBoost can handle missing values.
     """
     hea_path = Path(DATASET_DIR) / f"{record_id}.hea"
 
@@ -163,19 +196,21 @@ def read_realtime_metadata(record_id):
 
 
 # ============================================================
-# CTG FEATURES
+# CTG FEATURE HELPERS
 # ============================================================
 
 def accelerations(fhr, baseline):
-    return np.sum(fhr > baseline + 15)
+    return int(np.sum(fhr > baseline + 15))
 
 
 def decelerations(fhr, baseline):
-    return np.sum(fhr < baseline - 15)
+    return int(np.sum(fhr < baseline - 15))
 
 
 def stv(fhr):
-    return np.mean(np.abs(np.diff(fhr)))
+    if len(fhr) < 2:
+        return 0.0
+    return float(np.mean(np.abs(np.diff(fhr))))
 
 
 def ltv(fhr):
@@ -185,57 +220,144 @@ def ltv(fhr):
     for i in range(0, len(fhr) - window, window):
         vals.append(np.std(fhr[i:i + window]))
 
-    return np.mean(vals) if vals else np.std(fhr)
+    return float(np.mean(vals)) if vals else float(np.std(fhr))
 
 
-def extract_features(fhr, uc):
-    baseline = np.median(fhr)
+def safe_slope(fhr):
+    if len(fhr) < 2:
+        return 0.0
+
     t = np.arange(len(fhr))
 
+    try:
+        return float(np.polyfit(t, fhr, 1)[0])
+    except Exception:
+        return 0.0
+
+
+def extract_features_for_window(fhr_clean, uc_clean, fhr_valid_mask, prefix):
+    """
+    Extract CTG summary features from one specific window.
+    Prefix is used to avoid name collisions:
+    last5_fhr_mean, last10_fhr_mean, full_fhr_mean, etc.
+    """
     feats = {}
 
-    # FHR summary
-    feats["fhr_mean"] = float(np.mean(fhr))
-    feats["fhr_std"] = float(np.std(fhr))
-    feats["fhr_min"] = float(np.min(fhr))
-    feats["fhr_max"] = float(np.max(fhr))
-    feats["fhr_p05"] = float(np.percentile(fhr, 5))
-    feats["fhr_p95"] = float(np.percentile(fhr, 95))
+    if len(fhr_clean) == 0:
+        # Should not happen, but keep it safe.
+        for name in [
+            "fhr_mean", "fhr_std", "fhr_min", "fhr_max", "fhr_range",
+            "fhr_p05", "fhr_p95", "fhr_slope", "stv", "ltv",
+            "accelerations", "decelerations", "deceleration_ratio",
+            "acceleration_ratio", "uc_mean", "uc_std", "uc_max",
+            "uc_activity_ratio", "missing_signal_pct", "valid_fhr_ratio",
+        ]:
+            feats[f"{prefix}_{name}"] = 0.0
+        return feats
 
-    # Trend
-    feats["fhr_slope"] = float(np.polyfit(t, fhr, 1)[0])
+    baseline = np.median(fhr_clean)
 
-    # Variability
-    feats["stv"] = float(stv(fhr))
-    feats["ltv"] = float(ltv(fhr))
+    missing_signal_pct = float(100.0 * np.mean(fhr_valid_mask == 0))
+    valid_fhr_ratio = float(np.mean(fhr_valid_mask == 1))
 
-    # Simple event-like counts
-    feats["accelerations"] = int(accelerations(fhr, baseline))
-    feats["decelerations"] = int(decelerations(fhr, baseline))
+    acc_count = accelerations(fhr_clean, baseline)
+    dec_count = decelerations(fhr_clean, baseline)
 
-    # UC summary
-    feats["uc_mean"] = float(np.mean(uc))
-    feats["uc_std"] = float(np.std(uc))
-    feats["uc_max"] = float(np.max(uc))
+    n = max(len(fhr_clean), 1)
+
+    feats[f"{prefix}_fhr_mean"] = float(np.mean(fhr_clean))
+    feats[f"{prefix}_fhr_std"] = float(np.std(fhr_clean))
+    feats[f"{prefix}_fhr_min"] = float(np.min(fhr_clean))
+    feats[f"{prefix}_fhr_max"] = float(np.max(fhr_clean))
+    feats[f"{prefix}_fhr_range"] = float(np.max(fhr_clean) - np.min(fhr_clean))
+
+    feats[f"{prefix}_fhr_p05"] = float(np.percentile(fhr_clean, 5))
+    feats[f"{prefix}_fhr_p95"] = float(np.percentile(fhr_clean, 95))
+
+    feats[f"{prefix}_fhr_slope"] = safe_slope(fhr_clean)
+
+    feats[f"{prefix}_stv"] = stv(fhr_clean)
+    feats[f"{prefix}_ltv"] = ltv(fhr_clean)
+
+    feats[f"{prefix}_accelerations"] = int(acc_count)
+    feats[f"{prefix}_decelerations"] = int(dec_count)
+
+    feats[f"{prefix}_acceleration_ratio"] = float(acc_count / n)
+    feats[f"{prefix}_deceleration_ratio"] = float(dec_count / n)
+
+    feats[f"{prefix}_uc_mean"] = float(np.mean(uc_clean))
+    feats[f"{prefix}_uc_std"] = float(np.std(uc_clean))
+    feats[f"{prefix}_uc_max"] = float(np.max(uc_clean))
+    feats[f"{prefix}_uc_activity_ratio"] = float(np.mean(uc_clean > 0))
+
+    feats[f"{prefix}_missing_signal_pct"] = missing_signal_pct
+    feats[f"{prefix}_valid_fhr_ratio"] = valid_fhr_ratio
 
     return feats
+
+
+def extract_multi_window_features(fhr_raw, uc_raw):
+    """
+    Main CTG feature extraction.
+
+    Instead of using only the last 5 minutes, extract features from:
+    - last 5 minutes
+    - last 10 minutes
+    - last 20 minutes
+    - full recording
+    """
+    fhr_raw = np.asarray(fhr_raw, dtype=np.float32)
+    uc_raw = np.asarray(uc_raw, dtype=np.float32)
+
+    fhr_valid_mask_raw = np.ones_like(fhr_raw, dtype=np.float32)
+    fhr_valid_mask_raw[(fhr_raw <= 0) | np.isnan(fhr_raw)] = 0.0
+
+    fhr_clean_full = clean_fhr(fhr_raw)
+    uc_clean_full = clean_uc(uc_raw)
+
+    all_features = {}
+
+    for prefix, window_len in WINDOWS.items():
+        if window_len is None:
+            fhr_w = fhr_clean_full
+            uc_w = uc_clean_full
+            mask_w = fhr_valid_mask_raw
+        else:
+            fhr_w = take_window(fhr_clean_full, window_len, 140)
+            uc_w = take_window(uc_clean_full, window_len, 0)
+            mask_w = take_window(fhr_valid_mask_raw, window_len, 0)
+
+        window_features = extract_features_for_window(
+            fhr_clean=fhr_w,
+            uc_clean=uc_w,
+            fhr_valid_mask=mask_w,
+            prefix=prefix,
+        )
+
+        all_features.update(window_features)
+
+    return all_features
 
 
 # ============================================================
 # THRESHOLD SELECTION
 # ============================================================
 
-def choose_threshold_for_recall(y_true, y_prob, target_recall=0.70):
+def choose_threshold_for_recall(y_true, y_prob, target_recall=0.60):
     """
     Choose threshold using VALIDATION set.
 
-    We scan thresholds and pick one that:
+    Scan thresholds and pick one that:
     - reaches recall >= target_recall for Danger
     - among those, maximizes Danger precision
 
     If no threshold reaches target recall, choose threshold with max recall.
+
+    Note:
+    The minimum threshold is intentionally not below MIN_THRESHOLD,
+    to avoid classifying nearly everything as Danger.
     """
-    thresholds = np.linspace(0.01, 0.95, 95)
+    thresholds = np.linspace(MIN_THRESHOLD, MAX_THRESHOLD, 91)
 
     best_thr = 0.5
     best_precision = -1.0
@@ -335,6 +457,25 @@ def print_danger_only_evaluation(y_true, y_prob, threshold, title):
     }
 
 
+def print_threshold_table(y_true, y_prob):
+    """
+    Analysis only.
+    Helps understand whether a useful threshold exists.
+    """
+    print("\nThreshold analysis on TEST set:")
+    print("thr   | TP | FP | FN | TN | Recall | Precision")
+    print("-" * 55)
+
+    for thr in [0.05, 0.10, 0.15, 0.20, 0.25, 0.30, 0.40, 0.50]:
+        pred = (np.array(y_prob) >= thr).astype(int)
+        tn, fp, fn, tp = confusion_matrix(y_true, pred, labels=[0, 1]).ravel()
+
+        rec = recall_score(y_true, pred, pos_label=1, zero_division=0)
+        pre = precision_score(y_true, pred, pos_label=1, zero_division=0)
+
+        print(f"{thr:0.2f} | {tp:2d} | {fp:2d} | {fn:2d} | {tn:2d} | {rec:0.3f}  | {pre:0.3f}")
+
+
 # ============================================================
 # LOAD DATA
 # ============================================================
@@ -356,15 +497,11 @@ for i, file in enumerate(files):
         if "FHR" not in df.columns or "UC" not in df.columns:
             continue
 
-        fhr = clean_fhr(df["FHR"].values)
-        uc = clean_uc(df["UC"].values)
+        fhr_raw = df["FHR"].values
+        uc_raw = df["UC"].values
 
-        fhr = last_window_or_pad(fhr, SEQ_LEN, 140)
-        uc = last_window_or_pad(uc, SEQ_LEN, 0)
+        feats = extract_multi_window_features(fhr_raw, uc_raw)
 
-        feats = extract_features(fhr, uc)
-
-        # Add clinical metadata known in real time
         meta_feats = read_realtime_metadata(record_id)
         feats.update(meta_feats)
 
@@ -389,6 +526,13 @@ if len(feat_df) == 0:
 
 print("Dataset:", len(feat_df))
 print("Class counts (Normal=0, Danger=1):", np.bincount(feat_df["y"]))
+
+print("\nWindows used:")
+for name, length in WINDOWS.items():
+    if length is None:
+        print(f"- {name}: full recording")
+    else:
+        print(f"- {name}: {length / FS / 60:.1f} minutes")
 
 print("\nMetadata fields used:")
 for field in META_FIELD_NAMES:
@@ -440,7 +584,7 @@ print(f"scale_pos_weight = {scale_pos_weight:.3f}")
 # MODEL
 # ============================================================
 
-print("\nTraining XGBoost model...")
+print("\nTraining XGBoost multi-window model...")
 
 model = XGBClassifier(
     n_estimators=900,
@@ -486,12 +630,14 @@ test_metrics = print_danger_only_evaluation(
     y_true=y_test,
     y_prob=test_prob,
     threshold=best_threshold,
-    title="TEST RESULTS SUMMARY - XGBoost CTG + Metadata",
+    title="TEST RESULTS SUMMARY - XGBoost Multi-Window CTG + Metadata",
 )
+
+print_threshold_table(y_test, test_prob)
 
 
 # ============================================================
-# OPTIONAL: FEATURE IMPORTANCE TOP 15
+# FEATURE IMPORTANCE
 # ============================================================
 
 importance = model.feature_importances_
@@ -500,8 +646,8 @@ importance_df = pd.DataFrame({
     "importance": importance,
 }).sort_values("importance", ascending=False)
 
-print("\nTop 15 Feature Importances:")
-for _, row in importance_df.head(15).iterrows():
+print("\nTop 20 Feature Importances:")
+for _, row in importance_df.head(20).iterrows():
     print(f"{row['feature']}: {row['importance']:.4f}")
 
 
@@ -512,31 +658,26 @@ for _, row in importance_df.head(15).iterrows():
 joblib.dump(model, MODEL_PATH)
 
 stats = {
-    "model_type": "XGBoostCTGWithMetadata",
+    "model_type": "XGBoostMultiWindowCTGWithMetadata",
 
     "feature_names": feature_names,
-    "ctg_features": [
-        "fhr_mean",
-        "fhr_std",
-        "fhr_min",
-        "fhr_max",
-        "fhr_p05",
-        "fhr_p95",
-        "fhr_slope",
-        "stv",
-        "ltv",
-        "accelerations",
-        "decelerations",
-        "uc_mean",
-        "uc_std",
-        "uc_max",
-    ],
+
+    "windows": {
+        name: None if length is None else int(length)
+        for name, length in WINDOWS.items()
+    },
+
+    "window_descriptions": {
+        name: "full recording" if length is None else f"{length / FS / 60:.1f} minutes"
+        for name, length in WINDOWS.items()
+    },
+
     "metadata_fields": META_FIELD_NAMES,
 
-    "seq_len": SEQ_LEN,
     "fs": FS,
 
     "threshold": float(best_threshold),
+    "min_threshold": float(MIN_THRESHOLD),
     "target_recall": float(TARGET_RECALL),
     "ph_danger_threshold": float(PH_DANGER_THRESHOLD),
 
@@ -573,8 +714,8 @@ print(f"Model: {MODEL_PATH}")
 print(f"Stats: {STATS_PATH}")
 
 print("\nImportant:")
-print("To use this model in the web app, add an XGBoost adapter that:")
-print("1. Extracts the same CTG features from the uploaded CSV.")
+print("To use this model in the web app, update/add an XGBoost adapter that:")
+print("1. Extracts the same multi-window CTG features from the uploaded CSV.")
 print("2. Reads the same metadata fields from the matching .hea file.")
 print("3. Orders features exactly according to xgboost_stats.json['feature_names'].")
 print("4. Loads xgboost_model.joblib and applies the saved threshold.")
