@@ -112,7 +112,7 @@ class MiniRocketAdapter(BaseModelAdapter):
                     feats.append(float((conv_out > 0).mean()))
         return np.array(feats, dtype=np.float32)
 
-    def preprocess(self, df: pd.DataFrame) -> np.ndarray:
+    def preprocess(self, df: pd.DataFrame, **context) -> np.ndarray:
         raw = self._build_raw_sequence(df)
         if self._mean is not None:
             return (raw - self._mean) / self._std

@@ -109,7 +109,7 @@ class BinaryCNNAdapter(BaseModelAdapter):
 
         return np.stack([fhr_fix, uc_fix, mask_fix], axis=1)  # (SEQ_LEN, 3)
 
-    def preprocess(self, df: pd.DataFrame) -> np.ndarray:
+    def preprocess(self, df: pd.DataFrame, **context) -> np.ndarray:
         raw = self._build_raw_sequence(df)
         if self._mean is not None:
             return (raw - self._mean) / self._std

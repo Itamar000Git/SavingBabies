@@ -53,7 +53,7 @@ def client():
     return TestClient(app)
 
 
-@pytest.mark.parametrize("model_name", ["binarycnn", "minirocket"])
+@pytest.mark.parametrize("model_name", ["binarycnn", "minirocket", "xgboost"])
 def test_medical_metadata_and_signal_features_are_consistent(client, model_name):
     csv_data = _csv_bytes(
         fhr_values=[120.0, 121.0, 122.0, 0.0, 124.0],
@@ -81,7 +81,7 @@ def test_medical_metadata_and_signal_features_are_consistent(client, model_name)
     assert medical["recording_duration_min"] == features["recording_duration_min"]
 
 
-@pytest.mark.parametrize("model_name", ["binarycnn", "minirocket"])
+@pytest.mark.parametrize("model_name", ["binarycnn", "minirocket", "xgboost"])
 def test_explanation_uses_same_values_as_medical_metadata(client, model_name):
     csv_data = _csv_bytes(
         fhr_values=[118.0, 119.0, 120.0, 0.0, 122.0],
@@ -110,7 +110,7 @@ def test_explanation_uses_same_values_as_medical_metadata(client, model_name):
     assert abs(_first_number(missing_signal_param["value"]) - medical["missing_signal_pct"]) < 0.01
 
 
-@pytest.mark.parametrize("model_name", ["binarycnn", "minirocket"])
+@pytest.mark.parametrize("model_name", ["binarycnn", "minirocket", "xgboost"])
 def test_prediction_confidence_is_valid_when_present(client, model_name):
     csv_data = _csv_bytes([150.0] * 1200)
 
@@ -129,7 +129,7 @@ def test_prediction_confidence_is_valid_when_present(client, model_name):
         assert 0.0 <= confidence <= 1.0
 
 
-@pytest.mark.parametrize("model_name", ["binarycnn", "minirocket"])
+@pytest.mark.parametrize("model_name", ["binarycnn", "minirocket", "xgboost"])
 def test_prediction_label_is_one_of_allowed_labels(client, model_name):
     csv_data = _csv_bytes([150.0] * 1200)
 
@@ -158,6 +158,7 @@ def test_models_endpoint_contains_required_models(client):
     assert "models" in body
     assert "binarycnn" in body["models"]
     assert "minirocket" in body["models"]
+    assert "xgboost" in body["models"]
 
 
 def test_predict_missing_model_name_returns_validation_error(client):
@@ -180,7 +181,7 @@ def test_predict_missing_file_returns_validation_error(client):
     assert r.status_code in (400, 422)
 
 
-@pytest.mark.parametrize("model_name", ["binarycnn", "minirocket"])
+@pytest.mark.parametrize("model_name", ["binarycnn", "minirocket", "xgboost"])
 def test_prediction_risk_score_is_valid_when_present(client, model_name):
     csv_data = _csv_bytes([150.0] * 1200)
 

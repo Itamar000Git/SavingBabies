@@ -12,11 +12,11 @@ class BaseModelAdapter(ABC):
         """Load weights from disk. Called once at server startup."""
 
     @abstractmethod
-    def preprocess(self, df: pd.DataFrame) -> np.ndarray:
+    def preprocess(self, df: pd.DataFrame, **context) -> np.ndarray:
         """
         Clean and normalize the CTG signal.
-        Stores raw signal stats on self for use by explain().
-        Returns normalized array ready for inference.
+        **context may carry baby= and mother= objects for models that use metadata.
+        Returns array ready for inference.
         """
 
     @abstractmethod

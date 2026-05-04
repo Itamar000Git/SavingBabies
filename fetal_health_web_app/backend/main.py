@@ -77,7 +77,7 @@ async def predict(
     metadata = RecordingMetadata(baby=baby, mother=mother, medical=medical)
 
     adapter = MODEL_REGISTRY[model_name]
-    processed = adapter.preprocess(df)
+    processed = adapter.preprocess(df, baby=baby, mother=mother)
     prediction = adapter.predict(processed)
     explanation_data = adapter.explain(processed, prediction, signal_features)
 
