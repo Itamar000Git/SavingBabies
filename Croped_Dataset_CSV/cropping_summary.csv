@@ -1,0 +1,553 @@
+file,original_rows,first_cut_rows,extra_3min_rows,final_rows,total_removed_rows,status
+1001.csv,19200,4263,720,14217,4983,cropped trailing low UC + extra 3 minutes
+1002.csv,19200,4372,720,14108,5092,cropped trailing low UC + extra 3 minutes
+1003.csv,18000,3106,720,14174,3826,cropped trailing low UC + extra 3 minutes
+1004.csv,16800,1009,720,15071,1729,cropped trailing low UC + extra 3 minutes
+1005.csv,18000,2591,720,14689,3311,cropped trailing low UC + extra 3 minutes
+1006.csv,16800,2294,720,13786,3014,cropped trailing low UC + extra 3 minutes
+1007.csv,15600,1097,720,13783,1817,cropped trailing low UC + extra 3 minutes
+1008.csv,16800,53,720,16027,773,cropped trailing low UC + extra 3 minutes
+1009.csv,20400,8955,720,10725,9675,cropped trailing low UC + extra 3 minutes
+1010.csv,16800,4739,720,11341,5459,cropped trailing low UC + extra 3 minutes
+1011.csv,15600,117,720,14763,837,cropped trailing low UC + extra 3 minutes
+1012.csv,16800,1238,720,14842,1958,cropped trailing low UC + extra 3 minutes
+1013.csv,18000,2988,720,14292,3708,cropped trailing low UC + extra 3 minutes
+1014.csv,19200,1822,720,16658,2542,cropped trailing low UC + extra 3 minutes
+1015.csv,19200,2512,720,15968,3232,cropped trailing low UC + extra 3 minutes
+1016.csv,16800,1751,720,14329,2471,cropped trailing low UC + extra 3 minutes
+1017.csv,21600,7398,720,13482,8118,cropped trailing low UC + extra 3 minutes
+1018.csv,15600,421,720,14459,1141,cropped trailing low UC + extra 3 minutes
+1019.csv,16800,2309,720,13771,3029,cropped trailing low UC + extra 3 minutes
+1020.csv,16800,1,720,16079,721,cropped trailing low UC + extra 3 minutes
+1021.csv,16800,3146,720,12934,3866,cropped trailing low UC + extra 3 minutes
+1022.csv,15620,110,720,14790,830,cropped trailing low UC + extra 3 minutes
+1023.csv,18000,1464,720,15816,2184,cropped trailing low UC + extra 3 minutes
+1024.csv,15600,55,720,14825,775,cropped trailing low UC + extra 3 minutes
+1025.csv,19200,3928,720,14552,4648,cropped trailing low UC + extra 3 minutes
+1026.csv,18000,3119,720,14161,3839,cropped trailing low UC + extra 3 minutes
+1027.csv,18000,10776,720,6504,11496,cropped trailing low UC + extra 3 minutes
+1028.csv,21600,0,0,21600,0,no trailing low UC - copied unchanged
+1029.csv,16800,3435,720,12645,4155,cropped trailing low UC + extra 3 minutes
+1030.csv,16800,2732,720,13348,3452,cropped trailing low UC + extra 3 minutes
+1031.csv,15600,539,720,14341,1259,cropped trailing low UC + extra 3 minutes
+1032.csv,21600,1049,720,19831,1769,cropped trailing low UC + extra 3 minutes
+1033.csv,15600,511,720,14369,1231,cropped trailing low UC + extra 3 minutes
+1034.csv,19200,3911,720,14569,4631,cropped trailing low UC + extra 3 minutes
+1035.csv,16800,255,720,15825,975,cropped trailing low UC + extra 3 minutes
+1036.csv,16800,851,720,15229,1571,cropped trailing low UC + extra 3 minutes
+1037.csv,18000,2292,720,14988,3012,cropped trailing low UC + extra 3 minutes
+1038.csv,16800,1187,720,14893,1907,cropped trailing low UC + extra 3 minutes
+1039.csv,16800,269,720,15811,989,cropped trailing low UC + extra 3 minutes
+1040.csv,18000,339,720,16941,1059,cropped trailing low UC + extra 3 minutes
+1041.csv,16800,1835,720,14245,2555,cropped trailing low UC + extra 3 minutes
+1042.csv,18000,6816,720,10464,7536,cropped trailing low UC + extra 3 minutes
+1043.csv,16800,7543,720,8537,8263,cropped trailing low UC + extra 3 minutes
+1044.csv,20400,7928,720,11752,8648,cropped trailing low UC + extra 3 minutes
+1045.csv,15600,970,720,13910,1690,cropped trailing low UC + extra 3 minutes
+1046.csv,19200,4357,720,14123,5077,cropped trailing low UC + extra 3 minutes
+1047.csv,19200,6342,720,12138,7062,cropped trailing low UC + extra 3 minutes
+1048.csv,18000,1195,720,16085,1915,cropped trailing low UC + extra 3 minutes
+1049.csv,15600,0,0,15600,0,no trailing low UC - copied unchanged
+1050.csv,20400,3910,720,15770,4630,cropped trailing low UC + extra 3 minutes
+1051.csv,19200,1355,720,17125,2075,cropped trailing low UC + extra 3 minutes
+1052.csv,16800,2616,720,13464,3336,cropped trailing low UC + extra 3 minutes
+1053.csv,16800,1562,720,14518,2282,cropped trailing low UC + extra 3 minutes
+1054.csv,21600,6112,720,14768,6832,cropped trailing low UC + extra 3 minutes
+1055.csv,16800,926,720,15154,1646,cropped trailing low UC + extra 3 minutes
+1056.csv,16800,4932,720,11148,5652,cropped trailing low UC + extra 3 minutes
+1057.csv,18600,4200,720,13680,4920,cropped trailing low UC + extra 3 minutes
+1058.csv,21600,10539,720,10341,11259,cropped trailing low UC + extra 3 minutes
+1059.csv,20400,2867,720,16813,3587,cropped trailing low UC + extra 3 minutes
+1060.csv,15600,2161,720,12719,2881,cropped trailing low UC + extra 3 minutes
+1061.csv,18000,3350,720,13930,4070,cropped trailing low UC + extra 3 minutes
+1062.csv,16800,2827,720,13253,3547,cropped trailing low UC + extra 3 minutes
+1063.csv,19200,3757,720,14723,4477,cropped trailing low UC + extra 3 minutes
+1064.csv,15600,1054,720,13826,1774,cropped trailing low UC + extra 3 minutes
+1065.csv,19200,94,720,18386,814,cropped trailing low UC + extra 3 minutes
+1066.csv,16800,1406,720,14674,2126,cropped trailing low UC + extra 3 minutes
+1067.csv,21600,838,720,20042,1558,cropped trailing low UC + extra 3 minutes
+1068.csv,16623,2223,720,13680,2943,cropped trailing low UC + extra 3 minutes
+1069.csv,15600,757,720,14123,1477,cropped trailing low UC + extra 3 minutes
+1070.csv,18000,1184,720,16096,1904,cropped trailing low UC + extra 3 minutes
+1071.csv,21600,803,720,20077,1523,cropped trailing low UC + extra 3 minutes
+1072.csv,18000,2636,720,14644,3356,cropped trailing low UC + extra 3 minutes
+1073.csv,21600,10933,720,9947,11653,cropped trailing low UC + extra 3 minutes
+1074.csv,16800,936,720,15144,1656,cropped trailing low UC + extra 3 minutes
+1075.csv,20400,673,720,19007,1393,cropped trailing low UC + extra 3 minutes
+1076.csv,15600,1318,720,13562,2038,cropped trailing low UC + extra 3 minutes
+1077.csv,16952,2552,720,13680,3272,cropped trailing low UC + extra 3 minutes
+1078.csv,19200,49,720,18431,769,cropped trailing low UC + extra 3 minutes
+1079.csv,18000,9941,720,7339,10661,cropped trailing low UC + extra 3 minutes
+1080.csv,16800,1021,720,15059,1741,cropped trailing low UC + extra 3 minutes
+1081.csv,16800,3561,720,12519,4281,cropped trailing low UC + extra 3 minutes
+1082.csv,20400,3128,720,16552,3848,cropped trailing low UC + extra 3 minutes
+1083.csv,16800,2826,720,13254,3546,cropped trailing low UC + extra 3 minutes
+1084.csv,16800,561,720,15519,1281,cropped trailing low UC + extra 3 minutes
+1085.csv,20400,10,720,19670,730,cropped trailing low UC + extra 3 minutes
+1086.csv,15600,1176,720,13704,1896,cropped trailing low UC + extra 3 minutes
+1087.csv,19200,2467,720,16013,3187,cropped trailing low UC + extra 3 minutes
+1088.csv,21600,3051,720,17829,3771,cropped trailing low UC + extra 3 minutes
+1089.csv,16800,2837,720,13243,3557,cropped trailing low UC + extra 3 minutes
+1090.csv,16800,2938,720,13142,3658,cropped trailing low UC + extra 3 minutes
+1091.csv,15600,38,720,14842,758,cropped trailing low UC + extra 3 minutes
+1092.csv,16800,742,720,15338,1462,cropped trailing low UC + extra 3 minutes
+1093.csv,15600,0,0,15600,0,no trailing low UC - copied unchanged
+1094.csv,21600,0,0,21600,0,no trailing low UC - copied unchanged
+1095.csv,16800,0,0,16800,0,no trailing low UC - copied unchanged
+1096.csv,19200,1118,720,17362,1838,cropped trailing low UC + extra 3 minutes
+1097.csv,16800,240,720,15840,960,cropped trailing low UC + extra 3 minutes
+1098.csv,19200,997,720,17483,1717,cropped trailing low UC + extra 3 minutes
+1099.csv,18000,1802,720,15478,2522,cropped trailing low UC + extra 3 minutes
+1100.csv,18000,4632,720,12648,5352,cropped trailing low UC + extra 3 minutes
+1101.csv,15600,541,720,14339,1261,cropped trailing low UC + extra 3 minutes
+1102.csv,15620,1272,720,13628,1992,cropped trailing low UC + extra 3 minutes
+1103.csv,15600,0,0,15600,0,no trailing low UC - copied unchanged
+1104.csv,18000,0,0,18000,0,all UC < threshold - copied unchanged
+1105.csv,19200,7703,720,10777,8423,cropped trailing low UC + extra 3 minutes
+1106.csv,16800,1327,720,14753,2047,cropped trailing low UC + extra 3 minutes
+1107.csv,16800,1771,720,14309,2491,cropped trailing low UC + extra 3 minutes
+1108.csv,20400,6667,720,13013,7387,cropped trailing low UC + extra 3 minutes
+1109.csv,16800,0,0,16800,0,no trailing low UC - copied unchanged
+1110.csv,16800,559,720,15521,1279,cropped trailing low UC + extra 3 minutes
+1111.csv,18000,3806,720,13474,4526,cropped trailing low UC + extra 3 minutes
+1112.csv,16800,12,720,16068,732,cropped trailing low UC + extra 3 minutes
+1113.csv,18000,403,720,16877,1123,cropped trailing low UC + extra 3 minutes
+1114.csv,15600,784,720,14096,1504,cropped trailing low UC + extra 3 minutes
+1115.csv,16800,2725,720,13355,3445,cropped trailing low UC + extra 3 minutes
+1116.csv,19200,338,720,18142,1058,cropped trailing low UC + extra 3 minutes
+1117.csv,21600,5622,720,15258,6342,cropped trailing low UC + extra 3 minutes
+1118.csv,16800,0,0,16800,0,no trailing low UC - copied unchanged
+1119.csv,15600,0,0,15600,0,all UC < threshold - copied unchanged
+1120.csv,16800,1473,720,14607,2193,cropped trailing low UC + extra 3 minutes
+1121.csv,20400,1501,720,18179,2221,cropped trailing low UC + extra 3 minutes
+1122.csv,20400,2999,720,16681,3719,cropped trailing low UC + extra 3 minutes
+1123.csv,19200,2522,720,15958,3242,cropped trailing low UC + extra 3 minutes
+1124.csv,21600,471,720,20409,1191,cropped trailing low UC + extra 3 minutes
+1125.csv,18000,4130,720,13150,4850,cropped trailing low UC + extra 3 minutes
+1126.csv,21600,6501,720,14379,7221,cropped trailing low UC + extra 3 minutes
+1127.csv,16800,0,0,16800,0,no trailing low UC - copied unchanged
+1128.csv,18000,0,0,18000,0,no trailing low UC - copied unchanged
+1129.csv,16820,0,0,16820,0,no trailing low UC - copied unchanged
+1130.csv,21600,0,0,21600,0,no trailing low UC - copied unchanged
+1131.csv,16800,2057,720,14023,2777,cropped trailing low UC + extra 3 minutes
+1132.csv,16800,235,720,15845,955,cropped trailing low UC + extra 3 minutes
+1133.csv,16800,2589,720,13491,3309,cropped trailing low UC + extra 3 minutes
+1134.csv,16800,14556,720,1524,15276,cropped trailing low UC + extra 3 minutes
+1135.csv,18000,1211,720,16069,1931,cropped trailing low UC + extra 3 minutes
+1136.csv,15600,896,720,13984,1616,cropped trailing low UC + extra 3 minutes
+1137.csv,19200,7890,720,10590,8610,cropped trailing low UC + extra 3 minutes
+1138.csv,18000,2121,720,15159,2841,cropped trailing low UC + extra 3 minutes
+1139.csv,16800,248,720,15832,968,cropped trailing low UC + extra 3 minutes
+1140.csv,20400,6962,720,12718,7682,cropped trailing low UC + extra 3 minutes
+1141.csv,18000,0,0,18000,0,no trailing low UC - copied unchanged
+1142.csv,16800,0,0,16800,0,no trailing low UC - copied unchanged
+1143.csv,20400,1967,720,17713,2687,cropped trailing low UC + extra 3 minutes
+1144.csv,20400,107,720,19573,827,cropped trailing low UC + extra 3 minutes
+1145.csv,16800,716,720,15364,1436,cropped trailing low UC + extra 3 minutes
+1146.csv,18000,3311,720,13969,4031,cropped trailing low UC + extra 3 minutes
+1147.csv,18000,78,720,17202,798,cropped trailing low UC + extra 3 minutes
+1148.csv,20400,3451,720,16229,4171,cropped trailing low UC + extra 3 minutes
+1149.csv,16800,0,0,16800,0,all UC < threshold - copied unchanged
+1150.csv,16800,63,720,16017,783,cropped trailing low UC + extra 3 minutes
+1151.csv,15600,277,720,14603,997,cropped trailing low UC + extra 3 minutes
+1152.csv,19200,239,720,18241,959,cropped trailing low UC + extra 3 minutes
+1153.csv,16800,273,720,15807,993,cropped trailing low UC + extra 3 minutes
+1154.csv,20400,3103,720,16577,3823,cropped trailing low UC + extra 3 minutes
+1155.csv,16800,0,0,16800,0,all UC < threshold - copied unchanged
+1156.csv,21600,11,720,20869,731,cropped trailing low UC + extra 3 minutes
+1157.csv,16800,2051,720,14029,2771,cropped trailing low UC + extra 3 minutes
+1158.csv,20400,130,720,19550,850,cropped trailing low UC + extra 3 minutes
+1159.csv,18000,1273,720,16007,1993,cropped trailing low UC + extra 3 minutes
+1160.csv,18000,3003,720,14277,3723,cropped trailing low UC + extra 3 minutes
+1161.csv,15600,0,0,15600,0,no trailing low UC - copied unchanged
+1162.csv,14400,372,720,13308,1092,cropped trailing low UC + extra 3 minutes
+1163.csv,15600,1033,720,13847,1753,cropped trailing low UC + extra 3 minutes
+1164.csv,18000,5061,720,12219,5781,cropped trailing low UC + extra 3 minutes
+1165.csv,15600,289,720,14591,1009,cropped trailing low UC + extra 3 minutes
+1166.csv,16800,968,720,15112,1688,cropped trailing low UC + extra 3 minutes
+1167.csv,16800,43,720,16037,763,cropped trailing low UC + extra 3 minutes
+1168.csv,15600,694,720,14186,1414,cropped trailing low UC + extra 3 minutes
+1169.csv,15600,139,720,14741,859,cropped trailing low UC + extra 3 minutes
+1170.csv,21600,69,720,20811,789,cropped trailing low UC + extra 3 minutes
+1171.csv,18000,6808,720,10472,7528,cropped trailing low UC + extra 3 minutes
+1172.csv,19200,1121,720,17359,1841,cropped trailing low UC + extra 3 minutes
+1173.csv,19200,5470,720,13010,6190,cropped trailing low UC + extra 3 minutes
+1174.csv,19200,91,720,18389,811,cropped trailing low UC + extra 3 minutes
+1175.csv,16800,2208,720,13872,2928,cropped trailing low UC + extra 3 minutes
+1176.csv,15600,1076,720,13804,1796,cropped trailing low UC + extra 3 minutes
+1177.csv,15600,1360,720,13520,2080,cropped trailing low UC + extra 3 minutes
+1178.csv,15600,1016,720,13864,1736,cropped trailing low UC + extra 3 minutes
+1179.csv,18000,72,720,17208,792,cropped trailing low UC + extra 3 minutes
+1180.csv,19200,1936,720,16544,2656,cropped trailing low UC + extra 3 minutes
+1181.csv,18000,3627,720,13653,4347,cropped trailing low UC + extra 3 minutes
+1182.csv,15600,0,0,15600,0,no trailing low UC - copied unchanged
+1183.csv,20400,42,720,19638,762,cropped trailing low UC + extra 3 minutes
+1184.csv,18000,5962,720,11318,6682,cropped trailing low UC + extra 3 minutes
+1185.csv,18000,1406,720,15874,2126,cropped trailing low UC + extra 3 minutes
+1186.csv,15600,0,0,15600,0,all UC < threshold - copied unchanged
+1187.csv,21600,8048,720,12832,8768,cropped trailing low UC + extra 3 minutes
+1188.csv,15600,0,0,15600,0,all UC < threshold - copied unchanged
+1189.csv,15600,0,0,15600,0,no trailing low UC - copied unchanged
+1190.csv,16800,575,720,15505,1295,cropped trailing low UC + extra 3 minutes
+1191.csv,15600,648,720,14232,1368,cropped trailing low UC + extra 3 minutes
+1192.csv,16800,856,720,15224,1576,cropped trailing low UC + extra 3 minutes
+1193.csv,15600,0,0,15600,0,no trailing low UC - copied unchanged
+1194.csv,16800,2129,720,13951,2849,cropped trailing low UC + extra 3 minutes
+1195.csv,16800,0,0,16800,0,no trailing low UC - copied unchanged
+1196.csv,19200,6686,720,11794,7406,cropped trailing low UC + extra 3 minutes
+1197.csv,16800,661,720,15419,1381,cropped trailing low UC + extra 3 minutes
+1198.csv,15600,1084,720,13796,1804,cropped trailing low UC + extra 3 minutes
+1199.csv,16800,5796,720,10284,6516,cropped trailing low UC + extra 3 minutes
+1200.csv,19200,2384,720,16096,3104,cropped trailing low UC + extra 3 minutes
+1201.csv,19200,132,720,18348,852,cropped trailing low UC + extra 3 minutes
+1202.csv,16800,856,720,15224,1576,cropped trailing low UC + extra 3 minutes
+1203.csv,18016,6272,720,11024,6992,cropped trailing low UC + extra 3 minutes
+1204.csv,16800,1581,720,14499,2301,cropped trailing low UC + extra 3 minutes
+1205.csv,15600,3511,720,11369,4231,cropped trailing low UC + extra 3 minutes
+1206.csv,18000,2198,720,15082,2918,cropped trailing low UC + extra 3 minutes
+1207.csv,14880,454,720,13706,1174,cropped trailing low UC + extra 3 minutes
+1208.csv,21600,5,720,20875,725,cropped trailing low UC + extra 3 minutes
+1209.csv,16800,8559,720,7521,9279,cropped trailing low UC + extra 3 minutes
+1210.csv,16800,33,720,16047,753,cropped trailing low UC + extra 3 minutes
+1211.csv,20400,10563,720,9117,11283,cropped trailing low UC + extra 3 minutes
+1212.csv,15600,4322,720,10558,5042,cropped trailing low UC + extra 3 minutes
+1213.csv,19200,506,720,17974,1226,cropped trailing low UC + extra 3 minutes
+1214.csv,16800,25,720,16055,745,cropped trailing low UC + extra 3 minutes
+1215.csv,16800,3736,720,12344,4456,cropped trailing low UC + extra 3 minutes
+1216.csv,16800,4,720,16076,724,cropped trailing low UC + extra 3 minutes
+1217.csv,16800,2215,720,13865,2935,cropped trailing low UC + extra 3 minutes
+1218.csv,21030,6630,720,13680,7350,cropped trailing low UC + extra 3 minutes
+1219.csv,16800,10409,720,5671,11129,cropped trailing low UC + extra 3 minutes
+1220.csv,18000,581,720,16699,1301,cropped trailing low UC + extra 3 minutes
+1221.csv,16800,300,720,15780,1020,cropped trailing low UC + extra 3 minutes
+1222.csv,18000,5942,720,11338,6662,cropped trailing low UC + extra 3 minutes
+1223.csv,15600,810,720,14070,1530,cropped trailing low UC + extra 3 minutes
+1224.csv,15600,384,720,14496,1104,cropped trailing low UC + extra 3 minutes
+1225.csv,15600,79,720,14801,799,cropped trailing low UC + extra 3 minutes
+1226.csv,15600,557,720,14323,1277,cropped trailing low UC + extra 3 minutes
+1227.csv,18000,7257,720,10023,7977,cropped trailing low UC + extra 3 minutes
+1228.csv,16800,2199,720,13881,2919,cropped trailing low UC + extra 3 minutes
+1229.csv,16800,909,720,15171,1629,cropped trailing low UC + extra 3 minutes
+1230.csv,15600,565,720,14315,1285,cropped trailing low UC + extra 3 minutes
+1231.csv,15600,191,720,14689,911,cropped trailing low UC + extra 3 minutes
+1232.csv,16800,4753,720,11327,5473,cropped trailing low UC + extra 3 minutes
+1233.csv,15600,0,0,15600,0,no trailing low UC - copied unchanged
+1234.csv,16800,951,720,15129,1671,cropped trailing low UC + extra 3 minutes
+1235.csv,16800,0,0,16800,0,no trailing low UC - copied unchanged
+1236.csv,16800,16,720,16064,736,cropped trailing low UC + extra 3 minutes
+1237.csv,16800,963,720,15117,1683,cropped trailing low UC + extra 3 minutes
+1238.csv,16800,507,720,15573,1227,cropped trailing low UC + extra 3 minutes
+1239.csv,20400,4231,720,15449,4951,cropped trailing low UC + extra 3 minutes
+1240.csv,19200,2685,720,15795,3405,cropped trailing low UC + extra 3 minutes
+1241.csv,19200,77,720,18403,797,cropped trailing low UC + extra 3 minutes
+1242.csv,16800,1080,720,15000,1800,cropped trailing low UC + extra 3 minutes
+1243.csv,15600,767,720,14113,1487,cropped trailing low UC + extra 3 minutes
+1244.csv,16800,77,720,16003,797,cropped trailing low UC + extra 3 minutes
+1245.csv,16800,1197,720,14883,1917,cropped trailing low UC + extra 3 minutes
+1246.csv,16800,5521,720,10559,6241,cropped trailing low UC + extra 3 minutes
+1247.csv,19200,3561,720,14919,4281,cropped trailing low UC + extra 3 minutes
+1248.csv,15600,602,720,14278,1322,cropped trailing low UC + extra 3 minutes
+1249.csv,15600,552,720,14328,1272,cropped trailing low UC + extra 3 minutes
+1250.csv,16800,2835,720,13245,3555,cropped trailing low UC + extra 3 minutes
+1251.csv,16800,2696,720,13384,3416,cropped trailing low UC + extra 3 minutes
+1252.csv,15600,677,720,14203,1397,cropped trailing low UC + extra 3 minutes
+1253.csv,16800,0,0,16800,0,no trailing low UC - copied unchanged
+1254.csv,16800,7925,720,8155,8645,cropped trailing low UC + extra 3 minutes
+1255.csv,16800,3353,720,12727,4073,cropped trailing low UC + extra 3 minutes
+1256.csv,20416,1567,720,18129,2287,cropped trailing low UC + extra 3 minutes
+1257.csv,16800,1,720,16079,721,cropped trailing low UC + extra 3 minutes
+1258.csv,18000,0,0,18000,0,all UC < threshold - copied unchanged
+1259.csv,15600,656,720,14224,1376,cropped trailing low UC + extra 3 minutes
+1260.csv,15600,0,0,15600,0,no trailing low UC - copied unchanged
+1261.csv,15600,3773,720,11107,4493,cropped trailing low UC + extra 3 minutes
+1262.csv,15600,3192,720,11688,3912,cropped trailing low UC + extra 3 minutes
+1263.csv,16800,1391,720,14689,2111,cropped trailing low UC + extra 3 minutes
+1264.csv,15600,1395,720,13485,2115,cropped trailing low UC + extra 3 minutes
+1265.csv,18000,2337,720,14943,3057,cropped trailing low UC + extra 3 minutes
+1266.csv,16800,138,720,15942,858,cropped trailing low UC + extra 3 minutes
+1267.csv,19200,3787,720,14693,4507,cropped trailing low UC + extra 3 minutes
+1268.csv,15600,5436,720,9444,6156,cropped trailing low UC + extra 3 minutes
+1269.csv,19200,1189,720,17291,1909,cropped trailing low UC + extra 3 minutes
+1270.csv,16800,293,720,15787,1013,cropped trailing low UC + extra 3 minutes
+1271.csv,19200,2281,720,16199,3001,cropped trailing low UC + extra 3 minutes
+1272.csv,19200,5242,720,13238,5962,cropped trailing low UC + extra 3 minutes
+1273.csv,15600,0,0,15600,0,no trailing low UC - copied unchanged
+1274.csv,15542,1435,720,13387,2155,cropped trailing low UC + extra 3 minutes
+1275.csv,18000,5645,720,11635,6365,cropped trailing low UC + extra 3 minutes
+1276.csv,16800,5276,720,10804,5996,cropped trailing low UC + extra 3 minutes
+1277.csv,21600,7802,720,13078,8522,cropped trailing low UC + extra 3 minutes
+1278.csv,20400,135,720,19545,855,cropped trailing low UC + extra 3 minutes
+1279.csv,16800,10237,720,5843,10957,cropped trailing low UC + extra 3 minutes
+1280.csv,16254,1854,720,13680,2574,cropped trailing low UC + extra 3 minutes
+1281.csv,15600,4,720,14876,724,cropped trailing low UC + extra 3 minutes
+1282.csv,16800,1795,720,14285,2515,cropped trailing low UC + extra 3 minutes
+1283.csv,21600,7427,720,13453,8147,cropped trailing low UC + extra 3 minutes
+1284.csv,15600,5147,720,9733,5867,cropped trailing low UC + extra 3 minutes
+1285.csv,16800,1880,720,14200,2600,cropped trailing low UC + extra 3 minutes
+1286.csv,19200,2146,720,16334,2866,cropped trailing low UC + extra 3 minutes
+1287.csv,18000,204,720,17076,924,cropped trailing low UC + extra 3 minutes
+1288.csv,21600,1839,720,19041,2559,cropped trailing low UC + extra 3 minutes
+1289.csv,21600,8508,720,12372,9228,cropped trailing low UC + extra 3 minutes
+1290.csv,16800,968,720,15112,1688,cropped trailing low UC + extra 3 minutes
+1291.csv,19200,9046,720,9434,9766,cropped trailing low UC + extra 3 minutes
+1292.csv,16800,1998,720,14082,2718,cropped trailing low UC + extra 3 minutes
+1293.csv,15761,2000,720,13041,2720,cropped trailing low UC + extra 3 minutes
+1294.csv,15600,1738,720,13142,2458,cropped trailing low UC + extra 3 minutes
+1295.csv,15600,511,720,14369,1231,cropped trailing low UC + extra 3 minutes
+1296.csv,19200,8354,720,10126,9074,cropped trailing low UC + extra 3 minutes
+1297.csv,16800,841,720,15239,1561,cropped trailing low UC + extra 3 minutes
+1298.csv,19200,6645,720,11835,7365,cropped trailing low UC + extra 3 minutes
+1299.csv,16800,529,720,15551,1249,cropped trailing low UC + extra 3 minutes
+1300.csv,18000,6086,720,11194,6806,cropped trailing low UC + extra 3 minutes
+1301.csv,15600,1660,720,13220,2380,cropped trailing low UC + extra 3 minutes
+1302.csv,18000,0,0,18000,0,no trailing low UC - copied unchanged
+1303.csv,16800,952,720,15128,1672,cropped trailing low UC + extra 3 minutes
+1304.csv,20400,0,0,20400,0,no trailing low UC - copied unchanged
+1305.csv,21006,6606,720,13680,7326,cropped trailing low UC + extra 3 minutes
+1306.csv,15600,2799,720,12081,3519,cropped trailing low UC + extra 3 minutes
+1307.csv,16800,15,720,16065,735,cropped trailing low UC + extra 3 minutes
+1308.csv,16800,982,720,15098,1702,cropped trailing low UC + extra 3 minutes
+1309.csv,18518,4124,720,13674,4844,cropped trailing low UC + extra 3 minutes
+1310.csv,21600,4935,720,15945,5655,cropped trailing low UC + extra 3 minutes
+1311.csv,15600,191,720,14689,911,cropped trailing low UC + extra 3 minutes
+1312.csv,16800,3977,720,12103,4697,cropped trailing low UC + extra 3 minutes
+1313.csv,16800,2957,720,13123,3677,cropped trailing low UC + extra 3 minutes
+1314.csv,15600,0,0,15600,0,no trailing low UC - copied unchanged
+1315.csv,15600,3,720,14877,723,cropped trailing low UC + extra 3 minutes
+1316.csv,19200,2333,720,16147,3053,cropped trailing low UC + extra 3 minutes
+1317.csv,19200,987,720,17493,1707,cropped trailing low UC + extra 3 minutes
+1318.csv,18000,12431,720,4849,13151,cropped trailing low UC + extra 3 minutes
+1319.csv,15600,19,720,14861,739,cropped trailing low UC + extra 3 minutes
+1320.csv,15600,670,720,14210,1390,cropped trailing low UC + extra 3 minutes
+1321.csv,16800,2660,720,13420,3380,cropped trailing low UC + extra 3 minutes
+1322.csv,15600,326,720,14554,1046,cropped trailing low UC + extra 3 minutes
+1323.csv,19200,1107,720,17373,1827,cropped trailing low UC + extra 3 minutes
+1324.csv,15600,8,720,14872,728,cropped trailing low UC + extra 3 minutes
+1325.csv,19200,11187,720,7293,11907,cropped trailing low UC + extra 3 minutes
+1326.csv,16800,834,720,15246,1554,cropped trailing low UC + extra 3 minutes
+1327.csv,16800,0,0,16800,0,all UC < threshold - copied unchanged
+1328.csv,18000,2423,720,14857,3143,cropped trailing low UC + extra 3 minutes
+1329.csv,19220,0,0,19220,0,no trailing low UC - copied unchanged
+1330.csv,19200,1231,720,17249,1951,cropped trailing low UC + extra 3 minutes
+1331.csv,15600,1646,720,13234,2366,cropped trailing low UC + extra 3 minutes
+1332.csv,19200,671,720,17809,1391,cropped trailing low UC + extra 3 minutes
+1333.csv,16800,0,0,16800,0,no trailing low UC - copied unchanged
+1334.csv,16800,72,720,16008,792,cropped trailing low UC + extra 3 minutes
+1335.csv,16800,110,720,15970,830,cropped trailing low UC + extra 3 minutes
+1336.csv,16800,5042,720,11038,5762,cropped trailing low UC + extra 3 minutes
+1337.csv,15600,380,720,14500,1100,cropped trailing low UC + extra 3 minutes
+1338.csv,18000,2943,720,14337,3663,cropped trailing low UC + extra 3 minutes
+1339.csv,19200,1631,720,16849,2351,cropped trailing low UC + extra 3 minutes
+1340.csv,19200,0,0,19200,0,no trailing low UC - copied unchanged
+1341.csv,15600,369,720,14511,1089,cropped trailing low UC + extra 3 minutes
+1342.csv,15600,57,720,14823,777,cropped trailing low UC + extra 3 minutes
+1343.csv,16800,1552,720,14528,2272,cropped trailing low UC + extra 3 minutes
+1344.csv,21616,260,720,20636,980,cropped trailing low UC + extra 3 minutes
+1345.csv,15600,1321,720,13559,2041,cropped trailing low UC + extra 3 minutes
+1346.csv,15600,0,0,15600,0,no trailing low UC - copied unchanged
+1347.csv,18000,0,0,18000,0,no trailing low UC - copied unchanged
+1348.csv,18000,4839,720,12441,5559,cropped trailing low UC + extra 3 minutes
+1349.csv,15600,20,720,14860,740,cropped trailing low UC + extra 3 minutes
+1350.csv,16800,1669,720,14411,2389,cropped trailing low UC + extra 3 minutes
+1351.csv,21600,54,720,20826,774,cropped trailing low UC + extra 3 minutes
+1352.csv,15600,172,720,14708,892,cropped trailing low UC + extra 3 minutes
+1353.csv,18000,2737,720,14543,3457,cropped trailing low UC + extra 3 minutes
+1354.csv,18000,5384,720,11896,6104,cropped trailing low UC + extra 3 minutes
+1355.csv,21600,12899,720,7981,13619,cropped trailing low UC + extra 3 minutes
+1356.csv,14623,930,720,12973,1650,cropped trailing low UC + extra 3 minutes
+1357.csv,18000,132,720,17148,852,cropped trailing low UC + extra 3 minutes
+1358.csv,19173,4773,720,13680,5493,cropped trailing low UC + extra 3 minutes
+1359.csv,16800,2895,720,13185,3615,cropped trailing low UC + extra 3 minutes
+1360.csv,18000,4991,720,12289,5711,cropped trailing low UC + extra 3 minutes
+1361.csv,16800,2526,720,13554,3246,cropped trailing low UC + extra 3 minutes
+1362.csv,15600,977,720,13903,1697,cropped trailing low UC + extra 3 minutes
+1363.csv,21600,3839,720,17041,4559,cropped trailing low UC + extra 3 minutes
+1364.csv,16800,3719,720,12361,4439,cropped trailing low UC + extra 3 minutes
+1365.csv,16800,1764,720,14316,2484,cropped trailing low UC + extra 3 minutes
+1366.csv,16800,0,0,16800,0,no trailing low UC - copied unchanged
+1367.csv,16800,764,720,15316,1484,cropped trailing low UC + extra 3 minutes
+1368.csv,16800,1574,720,14506,2294,cropped trailing low UC + extra 3 minutes
+1369.csv,21600,2108,720,18772,2828,cropped trailing low UC + extra 3 minutes
+1370.csv,18000,0,0,18000,0,no trailing low UC - copied unchanged
+1371.csv,15600,3099,720,11781,3819,cropped trailing low UC + extra 3 minutes
+1372.csv,18000,31,720,17249,751,cropped trailing low UC + extra 3 minutes
+1373.csv,15600,292,720,14588,1012,cropped trailing low UC + extra 3 minutes
+1374.csv,16800,352,720,15728,1072,cropped trailing low UC + extra 3 minutes
+1375.csv,19200,39,720,18441,759,cropped trailing low UC + extra 3 minutes
+1376.csv,21600,8219,720,12661,8939,cropped trailing low UC + extra 3 minutes
+1377.csv,20400,6837,720,12843,7557,cropped trailing low UC + extra 3 minutes
+1378.csv,15600,28,720,14852,748,cropped trailing low UC + extra 3 minutes
+1379.csv,15600,0,0,15600,0,no trailing low UC - copied unchanged
+1380.csv,18000,576,720,16704,1296,cropped trailing low UC + extra 3 minutes
+1381.csv,19216,233,720,18263,953,cropped trailing low UC + extra 3 minutes
+1382.csv,18000,133,720,17147,853,cropped trailing low UC + extra 3 minutes
+1383.csv,18000,5775,720,11505,6495,cropped trailing low UC + extra 3 minutes
+1384.csv,21600,2707,720,18173,3427,cropped trailing low UC + extra 3 minutes
+1385.csv,15600,0,0,15600,0,no trailing low UC - copied unchanged
+1386.csv,16800,3340,720,12740,4060,cropped trailing low UC + extra 3 minutes
+1387.csv,16800,819,720,15261,1539,cropped trailing low UC + extra 3 minutes
+1388.csv,16800,2286,720,13794,3006,cropped trailing low UC + extra 3 minutes
+1389.csv,15600,1932,720,12948,2652,cropped trailing low UC + extra 3 minutes
+1390.csv,15600,0,0,15600,0,no trailing low UC - copied unchanged
+1391.csv,16800,0,0,16800,0,no trailing low UC - copied unchanged
+1392.csv,19200,3276,720,15204,3996,cropped trailing low UC + extra 3 minutes
+1393.csv,15600,799,720,14081,1519,cropped trailing low UC + extra 3 minutes
+1394.csv,18000,3841,720,13439,4561,cropped trailing low UC + extra 3 minutes
+1395.csv,16800,0,0,16800,0,no trailing low UC - copied unchanged
+1396.csv,15600,5,720,14875,725,cropped trailing low UC + extra 3 minutes
+1397.csv,16800,762,720,15318,1482,cropped trailing low UC + extra 3 minutes
+1398.csv,18000,3363,720,13917,4083,cropped trailing low UC + extra 3 minutes
+1399.csv,18000,1517,720,15763,2237,cropped trailing low UC + extra 3 minutes
+1400.csv,16800,0,0,16800,0,no trailing low UC - copied unchanged
+1401.csv,20400,387,720,19293,1107,cropped trailing low UC + extra 3 minutes
+1402.csv,15600,209,720,14671,929,cropped trailing low UC + extra 3 minutes
+1403.csv,18000,792,720,16488,1512,cropped trailing low UC + extra 3 minutes
+1404.csv,19200,2518,720,15962,3238,cropped trailing low UC + extra 3 minutes
+1405.csv,16800,1294,720,14786,2014,cropped trailing low UC + extra 3 minutes
+1406.csv,19200,2549,720,15931,3269,cropped trailing low UC + extra 3 minutes
+1407.csv,19200,2831,720,15649,3551,cropped trailing low UC + extra 3 minutes
+1408.csv,18789,4480,720,13589,5200,cropped trailing low UC + extra 3 minutes
+1409.csv,19200,1705,720,16775,2425,cropped trailing low UC + extra 3 minutes
+1410.csv,21600,3951,720,16929,4671,cropped trailing low UC + extra 3 minutes
+1411.csv,16800,5450,720,10630,6170,cropped trailing low UC + extra 3 minutes
+1412.csv,18000,3,720,17277,723,cropped trailing low UC + extra 3 minutes
+1413.csv,19200,252,720,18228,972,cropped trailing low UC + extra 3 minutes
+1414.csv,15600,1714,720,13166,2434,cropped trailing low UC + extra 3 minutes
+1415.csv,15600,0,0,15600,0,no trailing low UC - copied unchanged
+1416.csv,21600,1822,720,19058,2542,cropped trailing low UC + extra 3 minutes
+1417.csv,21600,528,720,20352,1248,cropped trailing low UC + extra 3 minutes
+1418.csv,19200,0,0,19200,0,no trailing low UC - copied unchanged
+1419.csv,21600,7593,720,13287,8313,cropped trailing low UC + extra 3 minutes
+1420.csv,15600,16,720,14864,736,cropped trailing low UC + extra 3 minutes
+1421.csv,16800,1,720,16079,721,cropped trailing low UC + extra 3 minutes
+1422.csv,19200,1763,720,16717,2483,cropped trailing low UC + extra 3 minutes
+1423.csv,16800,814,720,15266,1534,cropped trailing low UC + extra 3 minutes
+1424.csv,16800,3209,720,12871,3929,cropped trailing low UC + extra 3 minutes
+1425.csv,16800,0,0,16800,0,no trailing low UC - copied unchanged
+1426.csv,18000,169,720,17111,889,cropped trailing low UC + extra 3 minutes
+1427.csv,15600,562,720,14318,1282,cropped trailing low UC + extra 3 minutes
+1428.csv,15600,90,720,14790,810,cropped trailing low UC + extra 3 minutes
+1429.csv,15600,16,720,14864,736,cropped trailing low UC + extra 3 minutes
+1430.csv,18020,0,0,18020,0,no trailing low UC - copied unchanged
+1431.csv,15752,1520,720,13512,2240,cropped trailing low UC + extra 3 minutes
+1432.csv,15600,611,720,14269,1331,cropped trailing low UC + extra 3 minutes
+1433.csv,19200,3147,720,15333,3867,cropped trailing low UC + extra 3 minutes
+1434.csv,16800,908,720,15172,1628,cropped trailing low UC + extra 3 minutes
+1435.csv,18000,1018,720,16262,1738,cropped trailing low UC + extra 3 minutes
+1436.csv,20477,6077,720,13680,6797,cropped trailing low UC + extra 3 minutes
+1437.csv,16800,159,720,15921,879,cropped trailing low UC + extra 3 minutes
+1438.csv,18000,890,720,16390,1610,cropped trailing low UC + extra 3 minutes
+1439.csv,16800,824,720,15256,1544,cropped trailing low UC + extra 3 minutes
+1440.csv,15600,0,0,15600,0,no trailing low UC - copied unchanged
+1441.csv,15600,1815,720,13065,2535,cropped trailing low UC + extra 3 minutes
+1442.csv,19200,0,0,19200,0,no trailing low UC - copied unchanged
+1443.csv,15600,0,0,15600,0,no trailing low UC - copied unchanged
+1444.csv,16800,3270,720,12810,3990,cropped trailing low UC + extra 3 minutes
+1445.csv,16800,176,720,15904,896,cropped trailing low UC + extra 3 minutes
+1446.csv,15600,0,0,15600,0,no trailing low UC - copied unchanged
+1447.csv,18000,357,720,16923,1077,cropped trailing low UC + extra 3 minutes
+1448.csv,19200,6650,720,11830,7370,cropped trailing low UC + extra 3 minutes
+1449.csv,18000,4113,720,13167,4833,cropped trailing low UC + extra 3 minutes
+1450.csv,16800,1,720,16079,721,cropped trailing low UC + extra 3 minutes
+1451.csv,16800,478,720,15602,1198,cropped trailing low UC + extra 3 minutes
+1452.csv,18000,3503,720,13777,4223,cropped trailing low UC + extra 3 minutes
+1453.csv,15600,567,720,14313,1287,cropped trailing low UC + extra 3 minutes
+1454.csv,18000,0,0,18000,0,no trailing low UC - copied unchanged
+1455.csv,19200,1162,720,17318,1882,cropped trailing low UC + extra 3 minutes
+1456.csv,19200,14486,720,3994,15206,cropped trailing low UC + extra 3 minutes
+1457.csv,16820,0,0,16820,0,no trailing low UC - copied unchanged
+1458.csv,16800,19,720,16061,739,cropped trailing low UC + extra 3 minutes
+1459.csv,18000,976,720,16304,1696,cropped trailing low UC + extra 3 minutes
+1460.csv,18000,1397,720,15883,2117,cropped trailing low UC + extra 3 minutes
+1461.csv,16800,749,720,15331,1469,cropped trailing low UC + extra 3 minutes
+1462.csv,19200,173,720,18307,893,cropped trailing low UC + extra 3 minutes
+1463.csv,21620,8088,720,12812,8808,cropped trailing low UC + extra 3 minutes
+1464.csv,21618,0,0,21618,0,no trailing low UC - copied unchanged
+1465.csv,18000,3300,720,13980,4020,cropped trailing low UC + extra 3 minutes
+1466.csv,16800,581,720,15499,1301,cropped trailing low UC + extra 3 minutes
+1467.csv,18000,0,0,18000,0,no trailing low UC - copied unchanged
+1468.csv,18000,79,720,17201,799,cropped trailing low UC + extra 3 minutes
+1469.csv,15600,45,720,14835,765,cropped trailing low UC + extra 3 minutes
+1470.csv,16800,1911,720,14169,2631,cropped trailing low UC + extra 3 minutes
+1471.csv,18020,1519,720,15781,2239,cropped trailing low UC + extra 3 minutes
+1472.csv,18000,629,720,16651,1349,cropped trailing low UC + extra 3 minutes
+1473.csv,16800,154,720,15926,874,cropped trailing low UC + extra 3 minutes
+1474.csv,16800,3585,720,12495,4305,cropped trailing low UC + extra 3 minutes
+1475.csv,18000,1484,720,15796,2204,cropped trailing low UC + extra 3 minutes
+1476.csv,19220,0,0,19220,0,no trailing low UC - copied unchanged
+1477.csv,16800,381,720,15699,1101,cropped trailing low UC + extra 3 minutes
+1478.csv,19200,2191,720,16289,2911,cropped trailing low UC + extra 3 minutes
+1479.csv,19220,5140,720,13360,5860,cropped trailing low UC + extra 3 minutes
+1480.csv,21600,4054,720,16826,4774,cropped trailing low UC + extra 3 minutes
+1481.csv,20400,0,0,20400,0,no trailing low UC - copied unchanged
+1482.csv,15600,10527,720,4353,11247,cropped trailing low UC + extra 3 minutes
+1483.csv,20400,6054,720,13626,6774,cropped trailing low UC + extra 3 minutes
+1484.csv,19200,0,0,19200,0,no trailing low UC - copied unchanged
+1485.csv,20419,0,0,20419,0,no trailing low UC - copied unchanged
+1486.csv,15600,551,720,14329,1271,cropped trailing low UC + extra 3 minutes
+1487.csv,16800,54,720,16026,774,cropped trailing low UC + extra 3 minutes
+1488.csv,18000,4356,720,12924,5076,cropped trailing low UC + extra 3 minutes
+1489.csv,21600,2603,720,18277,3323,cropped trailing low UC + extra 3 minutes
+1490.csv,20400,0,0,20400,0,no trailing low UC - copied unchanged
+1491.csv,19200,1316,720,17164,2036,cropped trailing low UC + extra 3 minutes
+1492.csv,19200,2636,720,15844,3356,cropped trailing low UC + extra 3 minutes
+1493.csv,16800,783,720,15297,1503,cropped trailing low UC + extra 3 minutes
+1494.csv,20400,0,0,20400,0,no trailing low UC - copied unchanged
+1495.csv,19200,0,0,19200,0,no trailing low UC - copied unchanged
+1496.csv,19200,2145,720,16335,2865,cropped trailing low UC + extra 3 minutes
+1497.csv,16800,0,0,16800,0,no trailing low UC - copied unchanged
+1498.csv,15600,0,0,15600,0,no trailing low UC - copied unchanged
+1499.csv,20400,20,720,19660,740,cropped trailing low UC + extra 3 minutes
+1500.csv,21600,1079,720,19801,1799,cropped trailing low UC + extra 3 minutes
+1501.csv,19200,383,720,18097,1103,cropped trailing low UC + extra 3 minutes
+1502.csv,19220,556,720,17944,1276,cropped trailing low UC + extra 3 minutes
+1503.csv,18000,3565,720,13715,4285,cropped trailing low UC + extra 3 minutes
+1504.csv,16800,657,720,15423,1377,cropped trailing low UC + extra 3 minutes
+1505.csv,18000,1898,720,15382,2618,cropped trailing low UC + extra 3 minutes
+1506.csv,19200,2052,720,16428,2772,cropped trailing low UC + extra 3 minutes
+2001.csv,17767,3376,720,13671,4096,cropped trailing low UC + extra 3 minutes
+2002.csv,17274,2874,720,13680,3594,cropped trailing low UC + extra 3 minutes
+2003.csv,21218,18650,720,1848,19370,cropped trailing low UC + extra 3 minutes
+2004.csv,21231,7217,720,13294,7937,cropped trailing low UC + extra 3 minutes
+2005.csv,21458,7957,720,12781,8677,cropped trailing low UC + extra 3 minutes
+2006.csv,21305,6905,720,13680,7625,cropped trailing low UC + extra 3 minutes
+2007.csv,19763,5657,720,13386,6377,cropped trailing low UC + extra 3 minutes
+2008.csv,20114,6293,720,13101,7013,cropped trailing low UC + extra 3 minutes
+2009.csv,18524,4534,720,13270,5254,cropped trailing low UC + extra 3 minutes
+2010.csv,18188,4102,720,13366,4822,cropped trailing low UC + extra 3 minutes
+2011.csv,18000,1531,720,15749,2251,cropped trailing low UC + extra 3 minutes
+2012.csv,18770,5119,720,12931,5839,cropped trailing low UC + extra 3 minutes
+2013.csv,18424,9975,720,7729,10695,cropped trailing low UC + extra 3 minutes
+2014.csv,17608,4634,720,12254,5354,cropped trailing low UC + extra 3 minutes
+2015.csv,16723,2323,720,13680,3043,cropped trailing low UC + extra 3 minutes
+2016.csv,16585,2272,720,13593,2992,cropped trailing low UC + extra 3 minutes
+2017.csv,19119,4719,720,13680,5439,cropped trailing low UC + extra 3 minutes
+2018.csv,20450,6050,720,13680,6770,cropped trailing low UC + extra 3 minutes
+2019.csv,18849,5159,720,12970,5879,cropped trailing low UC + extra 3 minutes
+2020.csv,18155,4217,720,13218,4937,cropped trailing low UC + extra 3 minutes
+2021.csv,19230,5168,720,13342,5888,cropped trailing low UC + extra 3 minutes
+2022.csv,18384,6719,720,10945,7439,cropped trailing low UC + extra 3 minutes
+2023.csv,17541,3206,720,13615,3926,cropped trailing low UC + extra 3 minutes
+2024.csv,17678,4516,720,12442,5236,cropped trailing low UC + extra 3 minutes
+2025.csv,19130,4885,720,13525,5605,cropped trailing low UC + extra 3 minutes
+2026.csv,21347,8255,720,12372,8975,cropped trailing low UC + extra 3 minutes
+2027.csv,21183,6790,720,13673,7510,cropped trailing low UC + extra 3 minutes
+2028.csv,18415,4015,720,13680,4735,cropped trailing low UC + extra 3 minutes
+2029.csv,18957,4621,720,13616,5341,cropped trailing low UC + extra 3 minutes
+2030.csv,18083,3683,720,13680,4403,cropped trailing low UC + extra 3 minutes
+2031.csv,17146,2762,720,13664,3482,cropped trailing low UC + extra 3 minutes
+2032.csv,17745,3450,720,13575,4170,cropped trailing low UC + extra 3 minutes
+2033.csv,17706,3333,720,13653,4053,cropped trailing low UC + extra 3 minutes
+2034.csv,17560,3160,720,13680,3880,cropped trailing low UC + extra 3 minutes
+2035.csv,17761,3662,720,13379,4382,cropped trailing low UC + extra 3 minutes
+2036.csv,18599,4244,720,13635,4964,cropped trailing low UC + extra 3 minutes
+2037.csv,19099,4771,720,13608,5491,cropped trailing low UC + extra 3 minutes
+2038.csv,18568,4191,720,13657,4911,cropped trailing low UC + extra 3 minutes
+2039.csv,19142,8306,720,10116,9026,cropped trailing low UC + extra 3 minutes
+2040.csv,20775,6389,720,13666,7109,cropped trailing low UC + extra 3 minutes
+2041.csv,20679,6289,720,13670,7009,cropped trailing low UC + extra 3 minutes
+2042.csv,19082,5565,720,12797,6285,cropped trailing low UC + extra 3 minutes
+2043.csv,20400,3691,720,15989,4411,cropped trailing low UC + extra 3 minutes
+2044.csv,19110,4719,720,13671,5439,cropped trailing low UC + extra 3 minutes
+2045.csv,14894,1081,720,13093,1801,cropped trailing low UC + extra 3 minutes
+2046.csv,19137,6002,720,12415,6722,cropped trailing low UC + extra 3 minutes
