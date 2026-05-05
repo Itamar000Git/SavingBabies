@@ -12,7 +12,8 @@
       "Bash(Remove-Item -Recurse -Force frontend)",
       "PowerShell(New-Item *)",
       "Bash(pytest -v)",
-      "Bash(dir *)"
+      "Bash(dir *)",
+      "Bash(node -e \"require\\('recharts'\\); console.log\\('recharts ok'\\)\")"
     ]
   }
 }

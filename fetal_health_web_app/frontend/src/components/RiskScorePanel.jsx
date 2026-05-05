@@ -45,7 +45,8 @@ export default function RiskScorePanel({ prediction }) {
         </tbody>
       </table>
       <p className="rs-note">
-        Risk score = P(Danger) output from the CNN. Danger defined as pH &lt; 7.10 in training labels.
+        Risk score estimates the probability of low-pH fetal risk based on the CTG signal.
+        This tool is for research and decision support only.
       </p>
     </div>
   )

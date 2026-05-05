@@ -6,6 +6,8 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from core.schemas import (
     Explanation,
+    FHREvents,
+    FHREvent,
     GroundTruth,
     ImportantParameter,
     MedicalMetadata,
@@ -14,11 +16,13 @@ from core.schemas import (
     PredictionReliability,
     PredictionResponse,
     RecordingMetadata,
+    SignalData,
 )
 from core.file_parser import extract_signal_features, parse_csv, validate_duration
-from core.hea_parser import parse_hea_file
+from core.hea_parser import parse_hea_file, parse_outcome_fields
 from core.reliability import compute_reliability, get_display_label
 from core.ground_truth import lookup_ground_truth
+from core.ctg_events import detect_fhr_events, prepare_signal_data
 from models.registry import MODEL_REGISTRY
 
 DATASET_DIR = os.getenv(
@@ -84,7 +88,20 @@ async def predict(
     reliability_data = compute_reliability(prediction)
     display_label = get_display_label(prediction)
 
+    # Signal arrays and event detection
+    sig = prepare_signal_data(df)
+    signal_data = SignalData(**sig)
+    fhr_raw = df["FHR"].values.astype(float)
+    t_sec = df["t_sec"].values.astype(float) if "t_sec" in df.columns else None
+    events_raw = detect_fhr_events(fhr_raw, t_sec=t_sec,
+                                   gestational_weeks=baby.gestational_weeks)
+    fhr_events = FHREvents(
+        accelerations=[FHREvent(**e) for e in events_raw["accelerations"]],
+        decelerations=[FHREvent(**e) for e in events_raw["decelerations"]],
+    )
+
     gt_data = lookup_ground_truth(record_id, PH_FILE)
+    gt_data["bdecf"] = parse_outcome_fields(hea_path).get("bdecf")
     if gt_data["available"] and gt_data["actual_label"] and not prediction.get("placeholder"):
         pred_is_risk = any(k in prediction["label"].lower() for k in ("risk", "danger"))
         actual_is_risk = gt_data["actual_label"] == "Risk"
@@ -116,4 +133,6 @@ async def predict(
             missing_signal_warning=explanation_data.get("missing_signal_warning"),
         ),
         signal_features=medical,
+        signal_data=signal_data,
+        fhr_events=fhr_events,
     )

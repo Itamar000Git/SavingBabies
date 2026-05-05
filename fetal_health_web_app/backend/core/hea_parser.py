@@ -37,6 +37,16 @@ def _int(fields: dict[str, str], key: str) -> Optional[int]:
         return None
 
 
+def _float(fields: dict[str, str], key: str) -> Optional[float]:
+    v = fields.get(key)
+    if v is None:
+        return None
+    try:
+        return float(v)
+    except (ValueError, TypeError):
+        return None
+
+
 def _bool(fields: dict[str, str], key: str) -> Optional[bool]:
     v = _int(fields, key)
     return bool(v) if v is not None else None
@@ -72,3 +82,15 @@ def parse_hea_file(hea_path: str, record_id: str) -> tuple[BabyMetadata, MotherM
     )
 
     return baby, mother
+
+
+def parse_outcome_fields(hea_path: str) -> dict:
+    """
+    Parse outcome/clinical-reference fields from a .hea file.
+    These are post-delivery measurements (not model inputs).
+    Returns a dict with Optional float values.
+    """
+    fields = _parse_fields(hea_path)
+    return {
+        "bdecf": _float(fields, "BDecf"),
+    }

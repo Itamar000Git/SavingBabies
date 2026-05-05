@@ -1,11 +1,8 @@
 import { useState } from 'react'
 import UploadPanel from './components/UploadPanel'
-import BabyVisual from './components/BabyVisual'
-import ExplanationPanel from './components/ExplanationPanel'
-import MetadataPanel from './components/MetadataPanel'
-import ReliabilityPanel from './components/ReliabilityPanel'
-import RiskScorePanel from './components/RiskScorePanel'
-import GroundTruthPanel from './components/GroundTruthPanel'
+import CTGChartPanel from './components/CTGChartPanel'
+import ClassificationCard from './components/ClassificationCard'
+import ExplanationDashboard from './components/ExplanationDashboard'
 import LoadingOverlay from './components/LoadingOverlay'
 import ErrorBanner from './components/ErrorBanner'
 import { runPrediction } from './api/client'
@@ -34,34 +31,42 @@ export default function App() {
     setAppState('idle')
   }
 
-  const prediction = result?.prediction ?? null
-  const reliability = result?.reliability ?? null
-  const groundTruth = result?.ground_truth ?? null
-  const metadata = result?.metadata ?? null
-  const explanation = result?.explanation ?? null
-
   return (
     <div className="app">
       <LoadingOverlay visible={appState === 'loading'} />
       <UploadPanel onSubmit={handleSubmit} isLoading={appState === 'loading'} />
       <ErrorBanner error={error} onDismiss={handleDismissError} />
 
-      <div className="dashboard">
-        <div className="left-panel">
-          <BabyVisual prediction={prediction} />
-          {prediction?.risk_score != null
-            ? <RiskScorePanel prediction={prediction} />
-            : reliability && <ReliabilityPanel reliability={reliability} prediction={prediction} />}
-          {explanation && <ExplanationPanel explanation={explanation} />}
-        </div>
-        <div className="right-panel">
-          <MetadataPanel metadata={metadata} />
-          {groundTruth && <GroundTruthPanel groundTruth={groundTruth} prediction={prediction} />}
-        </div>
-      </div>
+      {result && (
+        <>
+          <CTGChartPanel
+            signalData={result.signal_data}
+            fhrEvents={result.fhr_events}
+          />
+
+          <div className="dashboard">
+            <div className="left-panel">
+              <ClassificationCard
+                prediction={result.prediction}
+                reliability={result.reliability}
+              />
+            </div>
+            <div className="right-panel">
+              <ExplanationDashboard
+                explanation={result.explanation}
+                signalFeatures={result.signal_features}
+                fhrEvents={result.fhr_events}
+                metadata={result.metadata}
+                groundTruth={result.ground_truth}
+                prediction={result.prediction}
+              />
+            </div>
+          </div>
+        </>
+      )}
 
       <footer className="disclaimer">
-        ⚠ This tool is for research and decision-support only and is not a medical diagnosis.
+        This tool is for research and decision-support only and is not a medical diagnosis.
       </footer>
     </div>
   )

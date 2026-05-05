@@ -26,6 +26,12 @@ export default function GroundTruthPanel({ groundTruth, prediction }) {
               <span className="gt-value">{groundTruth.ph_value}</span>
             </div>
           )}
+          <div className="gt-row">
+            <span className="gt-label">BDecf</span>
+            <span className="gt-value">
+              {groundTruth.bdecf != null ? groundTruth.bdecf : <em style={{ color: '#94a3b8', fontWeight: 400 }}>Not available</em>}
+            </span>
+          </div>
           <div className={`gt-correctness ${correctnessClass}`}>
             {groundTruth.correctness === 'Correct' && '✓ Correct prediction'}
             {groundTruth.correctness === 'Incorrect' && '✗ Incorrect prediction'}

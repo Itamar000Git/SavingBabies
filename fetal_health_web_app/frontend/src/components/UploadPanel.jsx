@@ -1,21 +1,11 @@
-import { useState, useEffect } from 'react'
-import { getModels } from '../api/client'
+import { useState } from 'react'
+
+const MODEL = 'binarycnn'
 
 export default function UploadPanel({ onSubmit, isLoading }) {
-  const [models, setModels] = useState([])
-  const [selectedModel, setSelectedModel] = useState('')
   const [file, setFile] = useState(null)
 
-  useEffect(() => {
-    getModels()
-      .then(data => {
-        setModels(data.models)
-        if (data.models.length > 0) setSelectedModel(data.models[0])
-      })
-      .catch(err => console.error('Could not load models:', err))
-  }, [])
-
-  const canRun = file !== null && selectedModel !== '' && !isLoading
+  const canRun = file !== null && !isLoading
 
   return (
     <div className="upload-panel">
@@ -27,25 +17,15 @@ export default function UploadPanel({ onSubmit, isLoading }) {
             accept=".csv"
             onChange={e => setFile(e.target.files[0] ?? null)}
           />
-          <span>{file ? file.name : 'Choose CSV file…'}</span>
+          <span>{file ? file.name : 'Choose CTG CSV file…'}</span>
         </label>
-
-        <select
-          value={selectedModel}
-          onChange={e => setSelectedModel(e.target.value)}
-          disabled={models.length === 0}
-        >
-          {models.map(m => (
-            <option key={m} value={m}>{m}</option>
-          ))}
-        </select>
 
         <button
           className="run-btn"
-          onClick={() => canRun && onSubmit(file, selectedModel)}
+          onClick={() => canRun && onSubmit(file, MODEL)}
           disabled={!canRun}
         >
-          {isLoading ? 'Running…' : 'Run Prediction'}
+          {isLoading ? 'Analysing…' : 'Analyse CTG'}
         </button>
       </div>
       {file && (

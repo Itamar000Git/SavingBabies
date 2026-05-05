@@ -1,7 +1,7 @@
 import os
 import tempfile
 import pytest
-from core.hea_parser import parse_hea_file
+from core.hea_parser import parse_hea_file, parse_outcome_fields
 
 SAMPLE_HEA = """\
 1001 2 4 19200
@@ -12,6 +12,7 @@ SAMPLE_HEA = """\
 
 #-- Outcome measures
 #pH           7.14
+#BDecf        8.14
 
 #-- Fetus/Neonate descriptors
 #Gest. weeks  37
@@ -141,7 +142,28 @@ def test_parse_hea_boolean_values_are_parsed_correctly(tmp_path):
 
     _, mother = parse_hea_file(str(p), "2004")
 
-
     assert mother.diabetes is False
     assert mother.hypertension is True
     assert mother.preeclampsia is False
+
+
+def test_parse_bdecf_present(hea_file):
+    outcomes = parse_outcome_fields(hea_file)
+    assert outcomes["bdecf"] == pytest.approx(8.14)
+
+
+def test_parse_bdecf_missing_returns_none(tmp_path):
+    p = tmp_path / "3001.hea"
+    p.write_text("#pH           7.10\n#Gest. weeks  38\n")
+    outcomes = parse_outcome_fields(str(p))
+    assert outcomes["bdecf"] is None
+
+
+def test_parse_bdecf_nonexistent_file_returns_none():
+    outcomes = parse_outcome_fields("/nonexistent/path.hea")
+    assert outcomes["bdecf"] is None
+
+
+def test_parse_bdecf_is_float(hea_file):
+    outcomes = parse_outcome_fields(hea_file)
+    assert isinstance(outcomes["bdecf"], float)

@@ -23,6 +23,7 @@ class PredictionReliability(BaseModel):
 class GroundTruth(BaseModel):
     actual_label: Optional[str] = None   # "Healthy" | "Risk" | None
     ph_value: Optional[float] = None
+    bdecf: Optional[float] = None        # Base deficit (extracellular fluid), outcome reference only
     correctness: Optional[str] = None    # "Correct" | "Incorrect" | "Unknown"
     available: bool = False
 
@@ -73,6 +74,31 @@ class Explanation(BaseModel):
     missing_signal_warning: Optional[str] = None  # set if missing_signal_pct > 20%
 
 
+class FHREvent(BaseModel):
+    event_type: str                        # "acceleration" | "deceleration"
+    start_index: int
+    end_index: int
+    peak_or_nadir_index: int
+    start_min: float
+    end_min: float
+    peak_or_nadir_min: float
+    duration_sec: float
+    max_height_bpm: Optional[float] = None
+    max_depth_bpm: Optional[float] = None
+    subtype: str                           # "acceleration" | "variable" | "gradual" | "prolonged"
+
+
+class FHREvents(BaseModel):
+    accelerations: list[FHREvent]
+    decelerations: list[FHREvent]
+
+
+class SignalData(BaseModel):
+    time_min: list[float]
+    fhr: list[Optional[float]]
+    uc: list[float]
+
+
 class PredictionResponse(BaseModel):
     model_name: str
     prediction: PredictionLabel
@@ -81,6 +107,8 @@ class PredictionResponse(BaseModel):
     metadata: RecordingMetadata
     explanation: Explanation
     signal_features: MedicalMetadata
+    signal_data: Optional[SignalData] = None
+    fhr_events: Optional[FHREvents] = None
 
 
 class ModelsResponse(BaseModel):

@@ -136,3 +136,107 @@ def test_medical_and_signal_features_consistent(client):
     assert sf["missing_signal_pct"] == medical["missing_signal_pct"]
     assert sf["uc_available"] == medical["uc_available"]
     assert sf["recording_duration_min"] == medical["recording_duration_min"]
+
+
+def test_ground_truth_has_bdecf_field(client):
+    """ground_truth must always include bdecf key (value may be None for uploaded files)."""
+    r = client.post(
+        "/predict",
+        data={"model_name": "binarycnn"},
+        files={"file": ("test.csv", io.BytesIO(_SAMPLE_CSV), "text/csv")},
+    )
+    assert r.status_code == 200
+    body = r.json()
+    assert "ground_truth" in body
+    gt = body["ground_truth"]
+    assert "bdecf" in gt  # key must exist; value is None when .hea is missing
+
+
+def test_signal_data_in_response(client):
+    """Response must include signal_data with time_min, fhr, uc arrays of equal length."""
+    r = client.post(
+        "/predict",
+        data={"model_name": "binarycnn"},
+        files={"file": ("test.csv", io.BytesIO(_SAMPLE_CSV), "text/csv")},
+    )
+    assert r.status_code == 200
+    body = r.json()
+    assert "signal_data" in body
+    sd = body["signal_data"]
+    assert "time_min" in sd
+    assert "fhr" in sd
+    assert "uc" in sd
+    assert len(sd["time_min"]) == len(sd["fhr"]) == len(sd["uc"])
+    assert len(sd["time_min"]) > 0
+    assert len(sd["time_min"]) <= 4800
+
+
+def test_signal_data_lengths_bounded(client):
+    """Long recordings must be downsampled to at most 4800 points."""
+    # 20-minute recording at 4 Hz = 4800 samples — should stay at or below 4800
+    n_20min = 20 * 60 * 4
+    csv = pd.DataFrame({
+        "t_sec": np.arange(n_20min) * 0.25,
+        "FHR": np.full(n_20min, 150.0),
+        "UC": np.full(n_20min, 5.0),
+    }).to_csv(index=False).encode()
+
+    r = client.post(
+        "/predict",
+        data={"model_name": "binarycnn"},
+        files={"file": ("long.csv", io.BytesIO(csv), "text/csv")},
+    )
+    assert r.status_code == 200
+    sd = r.json()["signal_data"]
+    assert len(sd["time_min"]) <= 4800
+
+
+def test_fhr_events_in_response(client):
+    """Response must include fhr_events with accelerations and decelerations lists."""
+    r = client.post(
+        "/predict",
+        data={"model_name": "binarycnn"},
+        files={"file": ("test.csv", io.BytesIO(_SAMPLE_CSV), "text/csv")},
+    )
+    assert r.status_code == 200
+    body = r.json()
+    assert "fhr_events" in body
+    ev = body["fhr_events"]
+    assert "accelerations" in ev
+    assert "decelerations" in ev
+    assert isinstance(ev["accelerations"], list)
+    assert isinstance(ev["decelerations"], list)
+
+
+def test_fhr_events_schema(client):
+    """Each event must have all required fields with correct types."""
+    # Craft a signal with a clear acceleration: 60 sec above baseline by 20 bpm
+    n = N  # 1200 samples = 5 minutes at 4 Hz
+    fhr_base = np.full(n, 140.0, dtype=np.float32)
+    # Inject acceleration from sample 200 to 460 (65 seconds at 4 Hz)
+    fhr_base[200:460] = 160.0
+    csv = pd.DataFrame({
+        "t_sec": np.arange(n) * 0.25,
+        "FHR": fhr_base,
+        "UC": np.full(n, 5.0),
+    }).to_csv(index=False).encode()
+
+    r = client.post(
+        "/predict",
+        data={"model_name": "binarycnn"},
+        files={"file": ("accel.csv", io.BytesIO(csv), "text/csv")},
+    )
+    assert r.status_code == 200
+    ev = r.json()["fhr_events"]
+    accels = ev["accelerations"]
+    assert len(accels) >= 1
+
+    a = accels[0]
+    for field in ("event_type", "start_index", "end_index", "peak_or_nadir_index",
+                  "start_min", "end_min", "peak_or_nadir_min", "duration_sec",
+                  "max_height_bpm", "subtype"):
+        assert field in a, f"Missing field: {field}"
+    assert a["event_type"] == "acceleration"
+    assert a["subtype"] == "acceleration"
+    assert a["duration_sec"] >= 15.0
+    assert a["max_height_bpm"] is not None and a["max_height_bpm"] > 0

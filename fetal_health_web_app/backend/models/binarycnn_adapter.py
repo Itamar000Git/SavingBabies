@@ -190,18 +190,9 @@ class BinaryCNNAdapter(BaseModelAdapter):
 
         label = prediction.get("label", "")
 
-        summary = (
-            "The model estimates the probability that this recording belongs to the low-pH risk group. "
-            "The CNN decision is based on the full CTG signal pattern, including fetal heart rate, "
-            "uterine contractions, and missing-signal mask. "
-            "The table shows summary indicators for interpretability, "
-            "but these are not the only inputs used by the CNN."
-        )
+        summary = "CNN analyses the full CTG signal to estimate low-pH fetal risk. The table shows key signal summary indicators."
         if label == "Borderline":
-            summary += (
-                " Because the risk score is close to the decision threshold, "
-                "this result is treated as borderline rather than a confident Healthy/Danger classification."
-            )
+            summary += " Risk score is close to the threshold — result is borderline."
 
         missing_signal_warning = None
         if missing_pct > 20:
@@ -210,6 +201,6 @@ class BinaryCNNAdapter(BaseModelAdapter):
         return {
             "important_parameters": params,
             "summary": summary,
-            "table_note": "Summary indicators — not the only inputs used by the CNN.",
+            "table_note": "Summary indicators only — CNN uses the full raw signal.",
             "missing_signal_warning": missing_signal_warning,
         }
