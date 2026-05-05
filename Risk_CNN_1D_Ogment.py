@@ -50,14 +50,11 @@ FINAL_MODEL_PATH = WEIGHTS_DIR / "multimodal_multitask_model.pt"
 FINAL_STATS_PATH = WEIGHTS_DIR / "multimodal_multitask_stats.json"
 BEST_MODEL_PATH = "best_multimodal_multitask.pt"
 
+# --- הגדרת GPU (כרטיס מסך) ---
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-# ============================================================
-# AUGMENTATION CONFIG
-# ============================================================
-
-AUGMENT_DANGER_ONLY = True
-SHIFT_SECONDS = [-30, 30]
+print(f"\n[SYSTEM] Running computation on device: {DEVICE}")
+if DEVICE.type == "cuda":
+    print(f"[SYSTEM] GPU Name: {torch.cuda.get_device_name(0)}\n")
 
 # ============================================================
 # TABULAR FEATURES DEFINITION
@@ -97,60 +94,6 @@ def make_fixed_length(fhr, uc, mask, seq_len):
     uc_pad = np.pad(uc, (0, pad), mode="edge")
     mask_pad = np.concatenate([mask, np.zeros(pad, dtype=np.float32)])
     return fhr_pad, uc_pad, mask_pad
-
-def shift_sequence(seq, shift_samples):
-    if shift_samples == 0:
-        return seq.copy().astype(np.float32)
-    shifted = np.empty_like(seq)
-    if shift_samples > 0:
-        k = min(shift_samples, len(seq) - 1)
-        shifted[k:] = seq[:-k]
-        shifted[:k, 0] = seq[0, 0] 
-        shifted[:k, 1] = seq[0, 1] 
-        shifted[:k, 2] = 0.0        
-    else:
-        k = min(abs(shift_samples), len(seq) - 1)
-        shifted[:-k] = seq[k:]
-        shifted[-k:, 0] = seq[-1, 0] 
-        shifted[-k:, 1] = seq[-1, 1] 
-        shifted[-k:, 2] = 0.0        
-    return shifted.astype(np.float32)
-
-def augment_train_set_multimodal(X_seq_train, X_tab_train, y_train, fs=4):
-    X_seq_aug, X_tab_aug, y_aug = [], [], []
-    shift_samples_list = [int(sec * fs) for sec in SHIFT_SECONDS]
-
-    # נגדיר סכנה כמקרה שבו לפחות אחד מהמדדים מראה סכנה
-    is_danger_array = (y_train[:, 0] == 1) | (y_train[:, 1] == 1)
-    
-    original_normal = int(np.sum(~is_danger_array))
-    original_risk = int(np.sum(is_danger_array))
-
-    for seq, tab, label, is_danger in zip(X_seq_train, X_tab_train, y_train, is_danger_array):
-        X_seq_aug.append(seq)
-        X_tab_aug.append(tab)
-        y_aug.append(label)
-
-        if AUGMENT_DANGER_ONLY and is_danger:
-            for shift_samples in shift_samples_list:
-                shifted = shift_sequence(seq, shift_samples)
-                X_seq_aug.append(shifted)
-                X_tab_aug.append(tab) 
-                y_aug.append(label)
-
-    y_aug_arr = np.array(y_aug, dtype=np.float32)
-    is_danger_aug = (y_aug_arr[:, 0] == 1) | (y_aug_arr[:, 1] == 1)
-
-    print("\n--- Train Augmentation Summary ---")
-    print(f"Original Train -> Normal: {original_normal} | Any Risk: {original_risk}")
-    print(f"Shift Seconds applied: {SHIFT_SECONDS}")
-    print(f"Augmented Train -> Normal: {int(np.sum(~is_danger_aug))} | Any Risk: {int(np.sum(is_danger_aug))}")
-    print(f"Total training samples now: {len(y_aug_arr)}")
-    print("----------------------------------\n")
-
-    return (np.array(X_seq_aug, dtype=np.float32), 
-            np.array(X_tab_aug, dtype=np.float32), 
-            y_aug_arr)
 
 def safe_average_precision(y_true, y_prob):
     if len(set(y_true)) < 2: return 0.0
@@ -201,7 +144,7 @@ for file in csv_files:
         fhr_fix, uc_fix, mask_fix = make_fixed_length(fhr_clean, uc_clean, mask, SEQ_LEN)
         seq = np.stack([fhr_fix, uc_fix, mask_fix], axis=1)
 
-        y = risk_dict[record_id] # רשימה של 2 תווית
+        y = risk_dict[record_id] # רשימה של 2 תוויות
 
         X_seq_list.append(seq)
         X_tab_list.append(tab_vector)
@@ -215,7 +158,7 @@ X_seq = np.array(X_seq_list, dtype=np.float32)
 X_tab = np.array(X_tab_list, dtype=np.float32)
 y = np.array(y_list, dtype=np.float32)
 
-# מניעת קריסה
+# מניעת קריסה בנתונים
 X_seq = np.nan_to_num(X_seq, nan=0.0, posinf=0.0, neginf=0.0)
 X_tab = np.nan_to_num(X_tab, nan=0.0, posinf=0.0, neginf=0.0)
 
@@ -229,7 +172,7 @@ print(f"riskBE counts: {np.bincount(y[:, 1].astype(int))}")
 
 idx = np.arange(len(y))
 
-# נשתמש ב-stratify לפי התווית הראשונה למען פשטות, כיוון שיש קורלציה גבוהה ביניהן
+# נשתמש ב-stratify לפי התווית של pH למען פשטות (קורלציה גבוהה בין המדדים)
 idx_temp, idx_test = train_test_split(idx, test_size=0.15, random_state=42, stratify=y[:, 0])
 idx_train, idx_val = train_test_split(idx_temp, test_size=0.15, random_state=42, stratify=y[idx_temp, 0])
 
@@ -238,41 +181,33 @@ X_seq_val, X_tab_val, y_val = X_seq[idx_val], X_tab[idx_val], y[idx_val]
 X_seq_test, X_tab_test, y_test = X_seq[idx_test], X_tab[idx_test], y[idx_test]
 
 # ============================================================
-# 5) AUGMENT TRAIN ONLY
+# 5) NORMALIZE BOTH SEQUENCE AND TABULAR DATA
 # ============================================================
 
-X_seq_train_aug, X_tab_train_aug, y_train_aug = augment_train_set_multimodal(
-    X_seq_train, X_tab_train, y_train, fs=FS
-)
-
-# ============================================================
-# 6) NORMALIZE BOTH SEQUENCE AND TABULAR DATA
-# ============================================================
-
-seq_train_mean = np.nanmean(X_seq_train_aug.reshape(-1, X_seq_train_aug.shape[-1]), axis=0)
-seq_train_std = np.nanstd(X_seq_train_aug.reshape(-1, X_seq_train_aug.shape[-1]), axis=0) + 1e-8
+seq_train_mean = np.nanmean(X_seq_train.reshape(-1, X_seq_train.shape[-1]), axis=0)
+seq_train_std = np.nanstd(X_seq_train.reshape(-1, X_seq_train.shape[-1]), axis=0) + 1e-8
 
 def normalize_seq(X_arr):
     norm = (X_arr - seq_train_mean) / seq_train_std
     return np.nan_to_num(norm, nan=0.0, posinf=0.0, neginf=0.0)
 
-X_seq_train_n = normalize_seq(X_seq_train_aug)
+X_seq_train_n = normalize_seq(X_seq_train)
 X_seq_val_n = normalize_seq(X_seq_val)
 X_seq_test_n = normalize_seq(X_seq_test)
 
-tab_train_mean = np.nanmean(X_tab_train_aug, axis=0)
-tab_train_std = np.nanstd(X_tab_train_aug, axis=0) + 1e-8
+tab_train_mean = np.nanmean(X_tab_train, axis=0)
+tab_train_std = np.nanstd(X_tab_train, axis=0) + 1e-8
 
 def normalize_tab(X_arr):
     norm = (X_arr - tab_train_mean) / tab_train_std
     return np.nan_to_num(norm, nan=0.0, posinf=0.0, neginf=0.0)
 
-X_tab_train_n = normalize_tab(X_tab_train_aug)
+X_tab_train_n = normalize_tab(X_tab_train)
 X_tab_val_n = normalize_tab(X_tab_val)
 X_tab_test_n = normalize_tab(X_tab_test)
 
 # ============================================================
-# 7) DATASET / DATALOADER
+# 6) DATASET / DATALOADER
 # ============================================================
 
 class MultimodalDataset(Dataset):
@@ -287,12 +222,12 @@ class MultimodalDataset(Dataset):
     def __getitem__(self, idx):
         return self.X_seq[idx], self.X_tab[idx], self.y[idx]
 
-train_loader = DataLoader(MultimodalDataset(X_seq_train_n, X_tab_train_n, y_train_aug), batch_size=BATCH_SIZE, shuffle=True)
+train_loader = DataLoader(MultimodalDataset(X_seq_train_n, X_tab_train_n, y_train), batch_size=BATCH_SIZE, shuffle=True)
 val_loader = DataLoader(MultimodalDataset(X_seq_val_n, X_tab_val_n, y_val), batch_size=BATCH_SIZE, shuffle=False)
 test_loader = DataLoader(MultimodalDataset(X_seq_test_n, X_tab_test_n, y_test), batch_size=1, shuffle=False)
 
 # ============================================================
-# 8) MULTIMODAL ARCHITECTURE (MULTI-TASK)
+# 7) MULTIMODAL ARCHITECTURE (MULTI-TASK)
 # ============================================================
 
 class MultimodalCTGModel(nn.Module):
@@ -337,27 +272,29 @@ class MultimodalCTGModel(nn.Module):
         logits = self.classifier(combined_features) # יציאה במימד (Batch, 2)
         return logits
 
+# שליחת המודל ל-GPU אם רלוונטי
 model = MultimodalCTGModel().to(DEVICE)
 
 # ============================================================
-# 9) LOSS & OPTIMIZER (MULTI-TASK WEIGHTS)
+# 8) LOSS & OPTIMIZER (MULTI-TASK WEIGHTS)
 # ============================================================
 
 # חישוב משקולות בנפרד לכל תווית
-neg_risk = (y_train_aug[:, 0] == 0).sum()
-pos_risk = (y_train_aug[:, 0] == 1).sum()
+neg_risk = (y_train[:, 0] == 0).sum()
+pos_risk = (y_train[:, 0] == 1).sum()
 pw_risk = (neg_risk / max(pos_risk, 1)) * POS_WEIGHT_MULT
 
-neg_be = (y_train_aug[:, 1] == 0).sum()
-pos_be = (y_train_aug[:, 1] == 1).sum()
+neg_be = (y_train[:, 1] == 0).sum()
+pos_be = (y_train[:, 1] == 1).sum()
 pw_be = (neg_be / max(pos_be, 1)) * POS_WEIGHT_MULT
 
+# שליחת משקולות פונקציית הטעות ל-GPU
 pos_weight = torch.tensor([pw_risk, pw_be], dtype=torch.float32).to(DEVICE)
 criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weight)
 optimizer = optim.Adam(model.parameters(), lr=LR)
 
 # ============================================================
-# 10) EVALUATION HELPERS 
+# 9) EVALUATION HELPERS 
 # ============================================================
 
 def get_probs_and_labels(loader):
@@ -394,10 +331,10 @@ def choose_threshold_for_custom_metric(y_true, y_prob):
     return best_thr
 
 # ============================================================
-# 11) TRAINING LOOP
+# 10) TRAINING LOOP
 # ============================================================
 
-print("\n--- Starting Multi-Task Multimodal Training ---")
+print("\n--- Starting Multi-Task Multimodal Training (No Augmentation) ---")
 best_ap = -1.0
 patience_counter = 0
 
@@ -406,6 +343,7 @@ for epoch in range(EPOCHS):
     train_loss_sum = 0.0
 
     for x_seq, x_tab, yb in train_loader:
+        # שליחת הנתונים ל-GPU
         x_seq, x_tab, yb = x_seq.to(DEVICE), x_tab.to(DEVICE), yb.to(DEVICE)
 
         optimizer.zero_grad()
@@ -442,7 +380,7 @@ for epoch in range(EPOCHS):
 model.load_state_dict(torch.load(BEST_MODEL_PATH, map_location=DEVICE))
 
 # ============================================================
-# 12) EVALUATION ON TEST SET (SEPARATE FOR EACH TASK)
+# 11) EVALUATION ON TEST SET (SEPARATE FOR EACH TASK)
 # ============================================================
 
 val_true, val_prob = get_probs_and_labels(val_loader)
@@ -486,7 +424,7 @@ metrics_be = evaluate_task(test_true[:, 1], test_prob[:, 1], best_thr_be, "TASK 
 print("\n" + "=" * 55)
 
 # ============================================================
-# 13) SAVE MODEL + STATS FOR WEB APP
+# 12) SAVE MODEL + STATS FOR WEB APP
 # ============================================================
 
 torch.save(model.state_dict(), FINAL_MODEL_PATH)
@@ -494,6 +432,7 @@ torch.save(model.state_dict(), FINAL_MODEL_PATH)
 stats = {
     "model_type": "MultimodalCNN_MLP_MultiTask",
     "tabular_features": TABULAR_FEATURES,
+    "augmentation": "None",
     
     "seq_train_mean": seq_train_mean.tolist(),
     "seq_train_std": seq_train_std.tolist(),
