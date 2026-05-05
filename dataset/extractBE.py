@@ -29,7 +29,7 @@ def add_be_and_risk(csv_path, hea_dir, output_csv_path):
         record_id = os.path.basename(file).split(".")[0]
         with open(file, 'r', encoding='utf-8', errors='ignore') as f:
             for line in f:
-                if line.startswith('#BE'):
+                if line.startswith('#BDecf'):
                     # חילוץ המספר מהשורה, למשל מתוך "#BE           -10.5"
                     parts = line.strip().split()
                     if len(parts) >= 2:
@@ -41,20 +41,20 @@ def add_be_and_risk(csv_path, hea_dir, output_csv_path):
                     break # מצאנו את ה-BE, אפשר לעבור לקובץ הבא
     
     # 3. הוספת ה-BE הגולמי ל-DataFrame
-    df['abs_BE'] = df[id_col].map(be_data).abs()
+    df['BE'] = df[id_col].map(be_data).abs()
     
     # 4. הוספת עמודה של הערך המוחלט של BE
     # פונקציית abs() הופכת לדוגמה מינוס 10.5 ל-10.5 פלוס
     
     # 5. יצירת עמודת תווית הסיכון: 1 אם הערך המוחלט גדול מ-8, אחרת 0
-    df['riskBE'] = (df['abs_BE'] > 8.0).astype(int)
+    df['riskBE'] = (df['BE'] > 8.0).astype(int)
     
     # 6. שמירת הקובץ המעודכן
     df.to_csv(output_csv_path, index=False)
     
     print(f"\nSuccessfully saved updated CSV to: {output_csv_path}")
     print("\nPreview of the updated data:")
-    print(df[[id_col, 'abs_BE', 'riskBE']].head(10))
+    print(df[[id_col, 'BE', 'riskBE']].head(10))
     print(f"\nClass counts for riskBE (Normal=0, Danger=1):")
     print(df['riskBE'].value_counts())
 

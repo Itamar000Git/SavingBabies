@@ -28,7 +28,7 @@ from sklearn.metrics import (
 
 csv_dir = "csv_output"
 info_dir = "dataset/info" 
-risk_file_path = "dataset/ph_levels_with_risk.csv" 
+risk_file_path = "dataset/ph_levels_with_be_risk_filled.csv" 
 
 FS = 4
 SEQ_LEN = 4800                 # 20 minutes @ 4Hz
@@ -36,7 +36,7 @@ BATCH_SIZE = 32
 EPOCHS = 30
 LR = 1e-3
 
-TARGET_RECALL = 0.70           # target recall for Danger on VALIDATION
+TARGET_RECALL = 0.70           
 POS_WEIGHT_MULT = 0.75
 
 PATIENCE = 6
@@ -46,9 +46,9 @@ MIN_DELTA_AP = 1e-3
 WEIGHTS_DIR = Path("fetal_health_web_app") / "backend" / "weights"
 WEIGHTS_DIR.mkdir(parents=True, exist_ok=True)
 
-FINAL_MODEL_PATH = WEIGHTS_DIR / "multimodal_model.pt"
-FINAL_STATS_PATH = WEIGHTS_DIR / "multimodal_stats.json"
-BEST_MODEL_PATH = "best_multimodal_binary.pt"
+FINAL_MODEL_PATH = WEIGHTS_DIR / "multimodal_multitask_model.pt"
+FINAL_STATS_PATH = WEIGHTS_DIR / "multimodal_multitask_stats.json"
+BEST_MODEL_PATH = "best_multimodal_multitask.pt"
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -62,6 +62,7 @@ SHIFT_SECONDS = [-30, 30]
 # ============================================================
 # TABULAR FEATURES DEFINITION
 # ============================================================
+# BE אינו נמצא כאן כדי למנוע זליגת נתונים
 TABULAR_FEATURES = [
     'Gest. weeks', 
     'Sex',         
@@ -75,11 +76,13 @@ TABULAR_FEATURES = [
 ]
 
 # ============================================================
-# 1) LOAD RISK LABELS
+# 1) LOAD RISK LABELS (MULTI-TASK)
 # ============================================================
 risk_df = pd.read_csv(risk_file_path)
 risk_df["record_id"] = risk_df["record_id"].astype(str)
-risk_dict = dict(zip(risk_df["record_id"], risk_df["RISK"]))
+
+# שומרים את שתי התוויות ברשימה: [RISK, riskBE]
+risk_dict = {str(row['record_id']): [int(row['RISK']), int(row['riskBE'])] for _, row in risk_df.iterrows()}
 
 # ============================================================
 # 2) HELPERS FOR SIGNAL PROCESSING
@@ -117,32 +120,31 @@ def augment_train_set_multimodal(X_seq_train, X_tab_train, y_train, fs=4):
     X_seq_aug, X_tab_aug, y_aug = [], [], []
     shift_samples_list = [int(sec * fs) for sec in SHIFT_SECONDS]
 
-    # ספירת הנתונים המקוריים
-    original_normal = int((y_train == 0).sum())
-    original_risk = int((y_train == 1).sum())
+    # נגדיר סכנה כמקרה שבו לפחות אחד מהמדדים מראה סכנה
+    is_danger_array = (y_train[:, 0] == 1) | (y_train[:, 1] == 1)
+    
+    original_normal = int(np.sum(~is_danger_array))
+    original_risk = int(np.sum(is_danger_array))
 
-    for seq, tab, label in zip(X_seq_train, X_tab_train, y_train):
-        # תמיד מוסיפים את הדגימה המקורית
+    for seq, tab, label, is_danger in zip(X_seq_train, X_tab_train, y_train, is_danger_array):
         X_seq_aug.append(seq)
         X_tab_aug.append(tab)
         y_aug.append(label)
 
-        # יצירת העותקים רק למקרי הסיכון
-        if AUGMENT_DANGER_ONLY and label == 1:
+        if AUGMENT_DANGER_ONLY and is_danger:
             for shift_samples in shift_samples_list:
                 shifted = shift_sequence(seq, shift_samples)
                 X_seq_aug.append(shifted)
                 X_tab_aug.append(tab) 
                 y_aug.append(label)
 
-    y_aug_arr = np.array(y_aug, dtype=np.int64)
-    aug_normal = int((y_aug_arr == 0).sum())
-    aug_risk = int((y_aug_arr == 1).sum())
+    y_aug_arr = np.array(y_aug, dtype=np.float32)
+    is_danger_aug = (y_aug_arr[:, 0] == 1) | (y_aug_arr[:, 1] == 1)
 
     print("\n--- Train Augmentation Summary ---")
-    print(f"Original Train -> Normal: {original_normal} | Risk: {original_risk}")
+    print(f"Original Train -> Normal: {original_normal} | Any Risk: {original_risk}")
     print(f"Shift Seconds applied: {SHIFT_SECONDS}")
-    print(f"Augmented Train -> Normal: {aug_normal} | Risk: {aug_risk} (Multiplied!)")
+    print(f"Augmented Train -> Normal: {int(np.sum(~is_danger_aug))} | Any Risk: {int(np.sum(is_danger_aug))}")
     print(f"Total training samples now: {len(y_aug_arr)}")
     print("----------------------------------\n")
 
@@ -199,7 +201,7 @@ for file in csv_files:
         fhr_fix, uc_fix, mask_fix = make_fixed_length(fhr_clean, uc_clean, mask, SEQ_LEN)
         seq = np.stack([fhr_fix, uc_fix, mask_fix], axis=1)
 
-        y = int(risk_dict[record_id])
+        y = risk_dict[record_id] # רשימה של 2 תווית
 
         X_seq_list.append(seq)
         X_tab_list.append(tab_vector)
@@ -211,14 +213,15 @@ for file in csv_files:
 
 X_seq = np.array(X_seq_list, dtype=np.float32)
 X_tab = np.array(X_tab_list, dtype=np.float32)
-y = np.array(y_list, dtype=np.int64)
+y = np.array(y_list, dtype=np.float32)
 
-# --- הגנת קריסה חובה ---
+# מניעת קריסה
 X_seq = np.nan_to_num(X_seq, nan=0.0, posinf=0.0, neginf=0.0)
 X_tab = np.nan_to_num(X_tab, nan=0.0, posinf=0.0, neginf=0.0)
 
 print(f"Successfully loaded {len(X_seq)} patients.")
-print(f"Class counts (Normal=0, Risk=1): {np.bincount(y)}")
+print(f"RISK (pH) counts: {np.bincount(y[:, 0].astype(int))}")
+print(f"riskBE counts: {np.bincount(y[:, 1].astype(int))}")
 
 # ============================================================
 # 4) SPLIT TRAIN / VAL / TEST 
@@ -226,8 +229,9 @@ print(f"Class counts (Normal=0, Risk=1): {np.bincount(y)}")
 
 idx = np.arange(len(y))
 
-idx_temp, idx_test = train_test_split(idx, test_size=0.15, random_state=42, stratify=y)
-idx_train, idx_val = train_test_split(idx_temp, test_size=0.15, random_state=42, stratify=y[idx_temp])
+# נשתמש ב-stratify לפי התווית הראשונה למען פשטות, כיוון שיש קורלציה גבוהה ביניהן
+idx_temp, idx_test = train_test_split(idx, test_size=0.15, random_state=42, stratify=y[:, 0])
+idx_train, idx_val = train_test_split(idx_temp, test_size=0.15, random_state=42, stratify=y[idx_temp, 0])
 
 X_seq_train, X_tab_train, y_train = X_seq[idx_train], X_tab[idx_train], y[idx_train]
 X_seq_val, X_tab_val, y_val = X_seq[idx_val], X_tab[idx_val], y[idx_val]
@@ -245,7 +249,6 @@ X_seq_train_aug, X_tab_train_aug, y_train_aug = augment_train_set_multimodal(
 # 6) NORMALIZE BOTH SEQUENCE AND TABULAR DATA
 # ============================================================
 
-# הגנת קריסה לנרמול סדרות הזמן
 seq_train_mean = np.nanmean(X_seq_train_aug.reshape(-1, X_seq_train_aug.shape[-1]), axis=0)
 seq_train_std = np.nanstd(X_seq_train_aug.reshape(-1, X_seq_train_aug.shape[-1]), axis=0) + 1e-8
 
@@ -257,7 +260,6 @@ X_seq_train_n = normalize_seq(X_seq_train_aug)
 X_seq_val_n = normalize_seq(X_seq_val)
 X_seq_test_n = normalize_seq(X_seq_test)
 
-# הגנת קריסה לנרמול הנתונים הטבלאיים
 tab_train_mean = np.nanmean(X_tab_train_aug, axis=0)
 tab_train_std = np.nanstd(X_tab_train_aug, axis=0) + 1e-8
 
@@ -290,7 +292,7 @@ val_loader = DataLoader(MultimodalDataset(X_seq_val_n, X_tab_val_n, y_val), batc
 test_loader = DataLoader(MultimodalDataset(X_seq_test_n, X_tab_test_n, y_test), batch_size=1, shuffle=False)
 
 # ============================================================
-# 8) MULTIMODAL ARCHITECTURE (LATE FUSION)
+# 8) MULTIMODAL ARCHITECTURE (MULTI-TASK)
 # ============================================================
 
 class MultimodalCTGModel(nn.Module):
@@ -302,12 +304,10 @@ class MultimodalCTGModel(nn.Module):
             nn.BatchNorm1d(32),
             nn.ReLU(),
             nn.MaxPool1d(2),
-
             nn.Conv1d(32, 64, kernel_size=15, padding=7),
             nn.BatchNorm1d(64),
             nn.ReLU(),
             nn.MaxPool1d(2),
-
             nn.Conv1d(64, 128, kernel_size=11, padding=5),
             nn.BatchNorm1d(128),
             nn.ReLU(),
@@ -326,7 +326,7 @@ class MultimodalCTGModel(nn.Module):
             nn.Linear(128 + 16, 64),
             nn.ReLU(),
             nn.Dropout(0.3),
-            nn.Linear(64, 1) 
+            nn.Linear(64, 2) # ----> 2 יציאות במקום 1 (אחת ל-RISK ואחת ל-riskBE)
         )
 
     def forward(self, x_seq, x_tab):
@@ -334,22 +334,25 @@ class MultimodalCTGModel(nn.Module):
         seq_features = self.cnn_extractor(x_seq).squeeze(-1) 
         tab_features = self.mlp_extractor(x_tab)             
         combined_features = torch.cat((seq_features, tab_features), dim=1) 
-        logit = self.classifier(combined_features).squeeze(-1)
-        return logit
+        logits = self.classifier(combined_features) # יציאה במימד (Batch, 2)
+        return logits
 
 model = MultimodalCTGModel().to(DEVICE)
 
 # ============================================================
-# 9) LOSS & OPTIMIZER
+# 9) LOSS & OPTIMIZER (MULTI-TASK WEIGHTS)
 # ============================================================
 
-neg = int((y_train_aug == 0).sum())
-pos = int((y_train_aug == 1).sum())
+# חישוב משקולות בנפרד לכל תווית
+neg_risk = (y_train_aug[:, 0] == 0).sum()
+pos_risk = (y_train_aug[:, 0] == 1).sum()
+pw_risk = (neg_risk / max(pos_risk, 1)) * POS_WEIGHT_MULT
 
-base_pos_weight = neg / max(pos, 1)
-pos_weight_value = base_pos_weight * POS_WEIGHT_MULT
-pos_weight = torch.tensor([pos_weight_value], dtype=torch.float32).to(DEVICE)
+neg_be = (y_train_aug[:, 1] == 0).sum()
+pos_be = (y_train_aug[:, 1] == 1).sum()
+pw_be = (neg_be / max(pos_be, 1)) * POS_WEIGHT_MULT
 
+pos_weight = torch.tensor([pw_risk, pw_be], dtype=torch.float32).to(DEVICE)
 criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weight)
 optimizer = optim.Adam(model.parameters(), lr=LR)
 
@@ -364,73 +367,17 @@ def get_probs_and_labels(loader):
         for x_seq, x_tab, yb in loader:
             x_seq, x_tab = x_seq.to(DEVICE), x_tab.to(DEVICE)
             logits = model(x_seq, x_tab) 
-            probs = torch.sigmoid(logits).cpu().numpy().reshape(-1)
-            y_true.extend(yb.numpy().astype(int).tolist())
+            probs = torch.sigmoid(logits).cpu().numpy() # מימד (Batch, 2)
+            y_true.extend(yb.numpy().tolist())
             y_prob.extend(probs.tolist())
-    return y_true, y_prob
-
-def choose_threshold_for_recall(y_true, y_prob, target_recall=0.70):
-    thresholds = np.linspace(0.05, 0.95, 19)
-    best_thr, best_prec, best_rec, best_rec_thr, best_rec_val = 0.5, -1.0, -1.0, 0.5, -1.0
-    for thr in thresholds:
-        preds = [1 if p >= thr else 0 for p in y_prob]
-        rec = recall_score(y_true, preds, pos_label=1, zero_division=0)
-        pre = precision_score(y_true, preds, pos_label=1, zero_division=0)
-        if rec > best_rec_val:
-            best_rec_val = rec
-            best_rec_thr = thr
-        if rec >= target_recall:
-            if pre > best_prec:
-                best_prec = pre
-                best_rec = rec
-                best_thr = thr
-    if best_prec < 0:
-        preds = [1 if p >= best_rec_thr else 0 for p in y_prob]
-        return best_rec_thr, best_rec_val, precision_score(y_true, preds, pos_label=1, zero_division=0)
-    return best_thr, best_rec, best_prec
-
-
-def choose_threshold_for_f1(y_true, y_prob):
-    """
-    סורק רמות שונות של ספי החלטה ובוחר את הסף 
-    שמניב את ציון ה-F1 הגבוה ביותר על סט ה-Validation.
-    """
-    thresholds = np.linspace(0.05, 0.95, 91) # סורק בקפיצות קטנות של 0.01
-    
-    best_thr = 0.5
-    best_f1 = -1.0
-    best_rec = -1.0
-    best_prec = -1.0
-
-    for thr in thresholds:
-        preds = [1 if p >= thr else 0 for p in y_prob]
-        
-        # חישוב המדדים עבור הסף הנוכחי
-        f1 = f1_score(y_true, preds, pos_label=1, zero_division=0)
-        rec = recall_score(y_true, preds, pos_label=1, zero_division=0)
-        prec = precision_score(y_true, preds, pos_label=1, zero_division=0)
-
-        # אם מצאנו F1 גבוה יותר, שומרים את הנתונים
-        if f1 > best_f1:
-            best_f1 = f1
-            best_thr = thr
-            best_rec = rec
-            best_prec = prec
-
-    return best_thr, best_f1, best_rec, best_prec
-
+    return np.array(y_true), np.array(y_prob)
 
 def choose_threshold_for_custom_metric(y_true, y_prob):
-    """
-    סורק רמות שונות של ספי החלטה ובוחר את הסף 
-    שממקסם את הנוסחה: (2 * Recall) + Precision
-    """
+    """ (2 * Recall) + Precision - לכל תווית בנפרד """
     thresholds = np.linspace(0.05, 0.95, 91)
     
     best_thr = 0.5
     best_custom_score = -1.0
-    best_rec = -1.0
-    best_prec = -1.0
 
     for thr in thresholds:
         preds = [1 if p >= thr else 0 for p in y_prob]
@@ -438,21 +385,19 @@ def choose_threshold_for_custom_metric(y_true, y_prob):
         rec = recall_score(y_true, preds, pos_label=1, zero_division=0)
         prec = precision_score(y_true, preds, pos_label=1, zero_division=0)
 
-        # המדד החדש שביקשת:
         current_score = (2 * rec) + prec
 
         if current_score > best_custom_score:
             best_custom_score = current_score
             best_thr = thr
-            best_rec = rec
-            best_prec = prec
 
-    return best_thr, best_custom_score, best_rec, best_prec
+    return best_thr
+
 # ============================================================
 # 11) TRAINING LOOP
 # ============================================================
 
-print("\n--- Starting Multimodal Training ---")
+print("\n--- Starting Multi-Task Multimodal Training ---")
 best_ap = -1.0
 patience_counter = 0
 
@@ -468,7 +413,6 @@ for epoch in range(EPOCHS):
         loss = criterion(logits, yb)
         
         loss.backward()
-        # --- הגנת קריסה - מניעת התפוצצות משקולות ---
         torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
         optimizer.step()
         train_loss_sum += loss.item()
@@ -476,87 +420,83 @@ for epoch in range(EPOCHS):
     train_loss = train_loss_sum / max(len(train_loader), 1)
 
     val_true, val_prob = get_probs_and_labels(val_loader)
-    val_ap = safe_average_precision(val_true, val_prob)
+    
+    # חישוב PR-AUC כממוצע של שתי המטרות
+    val_ap_risk = safe_average_precision(val_true[:, 0], val_prob[:, 0])
+    val_ap_be = safe_average_precision(val_true[:, 1], val_prob[:, 1])
+    val_ap_mean = (val_ap_risk + val_ap_be) / 2.0
 
     if (epoch + 1) % 2 == 0 or epoch == 0:
-        print(f"Epoch [{epoch + 1}/{EPOCHS}] | Train Loss: {train_loss:.4f} | Val PR-AUC: {val_ap:.4f}")
+        print(f"Epoch [{epoch + 1}/{EPOCHS}] | Train Loss: {train_loss:.4f} | Val Mean PR-AUC: {val_ap_mean:.4f}")
 
-    if val_ap > best_ap + MIN_DELTA_AP:
-        best_ap = val_ap
+    if val_ap_mean > best_ap + MIN_DELTA_AP:
+        best_ap = val_ap_mean
         patience_counter = 0
         torch.save(model.state_dict(), BEST_MODEL_PATH)
     else:
         patience_counter += 1
         if patience_counter >= PATIENCE:
-            print(f"Early stopping at epoch {epoch + 1}. Best Val PR-AUC: {best_ap:.4f}")
+            print(f"Early stopping at epoch {epoch + 1}. Best Mean Val PR-AUC: {best_ap:.4f}")
             break
 
 model.load_state_dict(torch.load(BEST_MODEL_PATH, map_location=DEVICE))
 
 # ============================================================
-# 12) EVALUATION ON TEST SET
+# 12) EVALUATION ON TEST SET (SEPARATE FOR EACH TASK)
 # ============================================================
 
-# val_true, val_prob = get_probs_and_labels(val_loader)
-# best_thr, _, _ = choose_threshold_for_recall(val_true, val_prob, TARGET_RECALL)
-
-
-
-# קוראים לפונקציה החדשה שממקסמת את ה-F1
 val_true, val_prob = get_probs_and_labels(val_loader)
-best_thr, best_f1_val, best_rec_val, best_prec_val = choose_threshold_for_custom_metric(val_true, val_prob)
-print("\n" + "=" * 55)
-print("TEST RESULTS SUMMARY - Multimodal CNN+MLP")
-print("=" * 55)
+
+# מציאת ספים אופטימליים לכל משימה בנפרד
+best_thr_risk = choose_threshold_for_custom_metric(val_true[:, 0], val_prob[:, 0])
+best_thr_be = choose_threshold_for_custom_metric(val_true[:, 1], val_prob[:, 1])
 
 test_true, test_prob = get_probs_and_labels(test_loader)
-test_pred = [1 if p >= best_thr else 0 for p in test_prob]
 
-cm = confusion_matrix(test_true, test_pred, labels=[0, 1])
-tn, fp, fn, tp = cm.ravel()
+def evaluate_task(y_t, y_p, thr, task_name):
+    y_pred = [1 if p >= thr else 0 for p in y_p]
+    cm = confusion_matrix(y_t, y_pred, labels=[0, 1])
+    tn, fp, fn, tp = cm.ravel()
+    
+    print(f"\n--- {task_name} EVALUATION ---")
+    print(f"Threshold: {thr:.2f}")
+    print(f"Recall: {recall_score(y_t, y_pred, pos_label=1, zero_division=0):.3f}")
+    print(f"Precision: {precision_score(y_t, y_pred, pos_label=1, zero_division=0):.3f}")
+    print(f"F1-Score: {f1_score(y_t, y_pred, pos_label=1, zero_division=0):.3f}")
+    print(f"False Negatives (Missed Danger): {fn}")
+    print(f"False Positives (False Alarms): {fp}")
+    print(f"PR-AUC: {safe_average_precision(y_t, y_p):.3f}")
+    
+    return {
+        "threshold": float(thr),
+        "recall": float(recall_score(y_t, y_pred, pos_label=1, zero_division=0)),
+        "precision": float(precision_score(y_t, y_pred, pos_label=1, zero_division=0)),
+        "f1": float(f1_score(y_t, y_pred, pos_label=1, zero_division=0)),
+        "fn": int(fn),
+        "fp": int(fp)
+    }
 
-accuracy = accuracy_score(test_true, test_pred)
-danger_precision = precision_score(test_true, test_pred, pos_label=1, zero_division=0)
-danger_recall = recall_score(test_true, test_pred, pos_label=1, zero_division=0)
-danger_f1 = f1_score(test_true, test_pred, pos_label=1, zero_division=0)
-test_pr_auc = safe_average_precision(test_true, test_prob)
-
-if len(set(test_true)) == 2:
-    test_roc_auc = roc_auc_score(test_true, test_prob)
-else:
-    test_roc_auc = None
-
-print(f"Threshold: {best_thr:.2f}")
-print(f"Accuracy: {accuracy:.3f}")
-print(f"Recall (Danger): {danger_recall:.3f}")
-print(f"Precision (Danger): {danger_precision:.3f}")
-print(f"False Negatives (Missed Danger): {fn}")
-print(f"False Positives (False Alarms): {fp}")
-print(f"PR-AUC: {test_pr_auc:.3f}")
-if test_roc_auc is not None:
-    print(f"ROC-AUC: {test_roc_auc:.3f}")
+print("\n" + "=" * 55)
+print("TEST RESULTS SUMMARY - MULTI-TASK LEARNING")
 print("=" * 55)
 
+metrics_risk = evaluate_task(test_true[:, 0], test_prob[:, 0], best_thr_risk, "TASK 1: RISK (pH)")
+metrics_be = evaluate_task(test_true[:, 1], test_prob[:, 1], best_thr_be, "TASK 2: riskBE")
+
+print("\n" + "=" * 55)
+
 # ============================================================
-# 13) SAVE MODEL + STATS FOR WEB APP (החלק שהיה חסר)
+# 13) SAVE MODEL + STATS FOR WEB APP
 # ============================================================
 
 torch.save(model.state_dict(), FINAL_MODEL_PATH)
 
 stats = {
-    "model_type": "MultimodalCNN_MLP",
+    "model_type": "MultimodalCNN_MLP_MultiTask",
     "tabular_features": TABULAR_FEATURES,
-    "augmentation": {
-        "train_only": True,
-        "danger_only": bool(AUGMENT_DANGER_ONLY),
-        "shift_seconds": SHIFT_SECONDS,
-    },
     
-    # נתוני נרמול לסדרות הזמן
     "seq_train_mean": seq_train_mean.tolist(),
     "seq_train_std": seq_train_std.tolist(),
-    
-    # נתוני נרמול למידע הקליני-טבלאי (חדש וחשוב!)
     "tab_train_mean": tab_train_mean.tolist(),
     "tab_train_std": tab_train_std.tolist(),
 
@@ -566,22 +506,12 @@ stats = {
     "seq_in_ch": 3,
     "tab_in_features": len(TABULAR_FEATURES),
 
-    "threshold": float(best_thr),
-    "target_recall": float(TARGET_RECALL),
-    "pos_weight_mult": float(POS_WEIGHT_MULT),
-    "pos_weight": float(pos_weight_value),
+    "threshold_risk_pH": metrics_risk["threshold"],
+    "threshold_risk_BE": metrics_be["threshold"],
 
     "test_metrics": {
-        "accuracy": float(accuracy),
-        "danger_precision": float(danger_precision),
-        "danger_recall": float(danger_recall),
-        "danger_f1": float(danger_f1),
-        "false_negatives": int(fn),
-        "false_positives": int(fp),
-        "true_negatives": int(tn),
-        "true_positives": int(tp),
-        "pr_auc": float(test_pr_auc),
-        "roc_auc": None if test_roc_auc is None else float(test_roc_auc),
+        "RISK_pH": metrics_risk,
+        "riskBE": metrics_be
     },
 }
 
@@ -591,4 +521,3 @@ with open(FINAL_STATS_PATH, "w", encoding="utf-8") as f:
 print("\nSaved artifacts for web app:")
 print(f"Model state_dict: {FINAL_MODEL_PATH}")
 print(f"Stats JSON:       {FINAL_STATS_PATH}")
-print("\nImportant: Update your FastAPI backend to load the Multimodal model and normalize Tabular data!")
