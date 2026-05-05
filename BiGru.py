@@ -159,8 +159,10 @@ X_seq = np.nan_to_num(X_seq, nan=0.0, posinf=0.0, neginf=0.0)
 X_tab = np.nan_to_num(X_tab, nan=0.0, posinf=0.0, neginf=0.0)
 
 print(f"Successfully loaded {len(X_seq)} patients.")
-print(f"RISK (pH) counts: {np.bincount(y[:, 0].astype(int))}")
-print(f"riskBE counts: {np.bincount(y[:, 1].astype(int))}")
+
+# ספירת המטופלים עם *כל* סוג של סיכון להדפסה בלבד
+any_risk_counts = np.bincount(((y[:, 0] == 1) | (y[:, 1] == 1)).astype(int))
+print(f"Overall Class counts (Normal=0, Any Risk=1): {any_risk_counts}")
 
 # ============================================================
 # 4) SPLIT TRAIN / VAL / TEST 
@@ -251,7 +253,7 @@ class MultimodalRNNModel(nn.Module):
             nn.Linear(hidden_dim * 2 + 16, 64),
             nn.ReLU(),
             nn.Dropout(0.3),
-            nn.Linear(64, 2) 
+            nn.Linear(64, 2) # מנבא 2 תוויות
         )
 
     def forward(self, x_seq, x_tab):
@@ -373,45 +375,44 @@ for epoch in range(EPOCHS):
 model.load_state_dict(torch.load(BEST_MODEL_PATH, map_location=DEVICE))
 
 # ============================================================
-# 11) EVALUATION ON TEST SET
+# 11) EVALUATION ON TEST SET (COMBINED ANY-RISK)
 # ============================================================
 
 val_true, val_prob = get_probs_and_labels(val_loader)
 
+# בחירת סף אופטימלי לכל מודל על בסיס ה-Validation
 best_thr_risk = choose_threshold_for_custom_metric(val_true[:, 0], val_prob[:, 0])
 best_thr_be = choose_threshold_for_custom_metric(val_true[:, 1], val_prob[:, 1])
 
 test_true, test_prob = get_probs_and_labels(test_loader)
 
-def evaluate_task(y_t, y_p, thr, task_name):
-    y_pred = [1 if p >= thr else 0 for p in y_p]
-    cm = confusion_matrix(y_t, y_pred, labels=[0, 1])
-    tn, fp, fn, tp = cm.ravel()
-    
-    print(f"\n--- {task_name} EVALUATION ---")
-    print(f"Threshold: {thr:.2f}")
-    print(f"Recall: {recall_score(y_t, y_pred, pos_label=1, zero_division=0):.3f}")
-    print(f"Precision: {precision_score(y_t, y_pred, pos_label=1, zero_division=0):.3f}")
-    print(f"F1-Score: {f1_score(y_t, y_pred, pos_label=1, zero_division=0):.3f}")
-    print(f"False Negatives (Missed Danger): {fn}")
-    print(f"False Positives (False Alarms): {fp}")
-    print(f"PR-AUC: {safe_average_precision(y_t, y_p):.3f}")
-    
-    return {
-        "threshold": float(thr),
-        "recall": float(recall_score(y_t, y_pred, pos_label=1, zero_division=0)),
-        "precision": float(precision_score(y_t, y_pred, pos_label=1, zero_division=0)),
-        "f1": float(f1_score(y_t, y_pred, pos_label=1, zero_division=0)),
-        "fn": int(fn),
-        "fp": int(fp)
-    }
+# יצירת מטרת האמת המאוחדת (סיכון pH או סיכון BE)
+test_true_any_risk = (test_true[:, 0] == 1) | (test_true[:, 1] == 1)
+
+# יצירת תחזית מאוחדת (המערכת צפצפה לאחת מהסיבות)
+test_pred_risk = (test_prob[:, 0] >= best_thr_risk)
+test_pred_be = (test_prob[:, 1] >= best_thr_be)
+test_pred_any_risk = (test_pred_risk | test_pred_be).astype(int)
+
+# חישוב מדדים על המטופל השלם
+cm = confusion_matrix(test_true_any_risk, test_pred_any_risk, labels=[0, 1])
+tn, fp, fn, tp = cm.ravel()
+
+acc = accuracy_score(test_true_any_risk, test_pred_any_risk)
+rec = recall_score(test_true_any_risk, test_pred_any_risk, pos_label=1, zero_division=0)
+prec = precision_score(test_true_any_risk, test_pred_any_risk, pos_label=1, zero_division=0)
+f1 = f1_score(test_true_any_risk, test_pred_any_risk, pos_label=1, zero_division=0)
 
 print("\n" + "=" * 55)
-print("TEST RESULTS SUMMARY - MULTI-TASK RNN")
+print("TEST RESULTS SUMMARY - OVERALL PATIENT RISK (Any Risk)")
 print("=" * 55)
-
-metrics_risk = evaluate_task(test_true[:, 0], test_prob[:, 0], best_thr_risk, "TASK 1: RISK (pH)")
-metrics_be = evaluate_task(test_true[:, 1], test_prob[:, 1], best_thr_be, "TASK 2: riskBE")
+print(f"Thresholds -> pH Risk: {best_thr_risk:.2f} | BE Risk: {best_thr_be:.2f}")
+print(f"Accuracy:  {acc:.3f}")
+print(f"Recall:    {rec:.3f} (Identified {tp} out of {tp+fn} babies at risk)")
+print(f"Precision: {prec:.3f} (True alarms: {tp} | False alarms: {fp})")
+print(f"F1-Score:  {f1:.3f}")
+print(f"False Negatives (Missed Danger): {fn}")
+print(f"False Positives (False Alarms):  {fp}")
 print("=" * 55)
 
 # ============================================================
@@ -436,12 +437,20 @@ stats = {
     "seq_in_ch": 3,
     "tab_in_features": len(TABULAR_FEATURES),
 
-    "threshold_risk_pH": metrics_risk["threshold"],
-    "threshold_risk_BE": metrics_be["threshold"],
+    "threshold_risk_pH": float(best_thr_risk),
+    "threshold_risk_BE": float(best_thr_be),
 
     "test_metrics": {
-        "RISK_pH": metrics_risk,
-        "riskBE": metrics_be
+        "OVERALL_ANY_RISK": {
+            "accuracy": float(acc),
+            "recall": float(rec),
+            "precision": float(prec),
+            "f1": float(f1),
+            "fn": int(fn),
+            "fp": int(fp),
+            "tn": int(tn),
+            "tp": int(tp)
+        }
     },
 }
 
