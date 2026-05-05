@@ -31,7 +31,7 @@ from xgboost import XGBClassifier
 # SavingBabies/XGBoost_Classifier_logistic.py
 PROJECT_ROOT = Path(__file__).resolve().parent
 
-CSV_DIR = PROJECT_ROOT / "Croped_Dataset_CSV"
+CSV_DIR = PROJECT_ROOT / "csv_output"
 DATASET_DIR = PROJECT_ROOT / "dataset"
 INFO_DIR = DATASET_DIR / "info"
 PH_FILE = DATASET_DIR / "ph_levels.csv"
@@ -305,19 +305,128 @@ def safe_slope(fhr):
     except Exception:
         return 0.0
 
+# ============================================================
+# CLINICAL EVENT DETECTION
+# ============================================================
 
+def detect_accelerations_clinical(fhr, fs=4):
+    if len(fhr) == 0:
+        return []
+
+    baseline = np.median(fhr)
+    thr = baseline + 15
+    min_len = int(15 * fs)
+
+    res, start = [], None
+    for i in range(len(fhr)):
+        if fhr[i] >= thr:
+            if start is None:
+                start = i
+        else:
+            if start is not None:
+                if i - start >= min_len:
+                    res.append((start, i))
+                start = None
+    return res
+
+
+def detect_decelerations_clinical(fhr, uc=None, fs=4):
+    if len(fhr) == 0:
+        return []
+
+    baseline = np.median(fhr)
+    thr = baseline - 15
+    min_len = int(15 * fs)
+
+    res, start = [], None
+    for i in range(len(fhr)):
+        if fhr[i] <= thr:
+            if start is None:
+                start = i
+        else:
+            if start is not None:
+                end = i
+                if end - start >= min_len:
+                    seg = fhr[start:end]
+                    depth = baseline - np.min(seg)
+                    duration = (end - start) / fs
+
+                    nadir = start + np.argmin(seg)
+                    onset = (nadir - start) / fs
+
+                    if duration >= 120:
+                        typ = "prolonged"
+                    elif onset < 30:
+                        typ = "variable"
+                    else:
+                        typ = "unspecified"
+
+                    if uc is not None:
+                        uc_seg = uc[start:end]
+                        if len(uc_seg) > 0:
+                            uc_peak = np.argmax(uc_seg) + start
+                            typ = "late" if nadir > uc_peak else "early"
+
+                    res.append({
+                        "duration": duration,
+                        "depth": depth,
+                        "type": typ
+                    })
+                start = None
+    return res
+
+
+# ============================================================
+# CLINICAL FEATURES
+# ============================================================
+
+def clinical_features(fhr, uc, fs=4):
+    if len(fhr) == 0:
+
+        return {
+            "dec_count":0,"dec_late":0,"dec_variable":0,"dec_prolonged":0,
+            "dec_avg_depth":0,"dec_max_depth":0,"dec_avg_duration":0,
+            "dec_time_ratio":0,"acc_count":0,"acc_rate":0,
+            "reactive":0,"nonreactive":0
+        }
+
+
+
+    decs = detect_decelerations_clinical(fhr, uc, fs)
+    accs = detect_accelerations_clinical(fhr, fs)
+
+    total_t = len(fhr) / fs
+
+    feats = {}
+    feats["dec_count"] = len(decs)
+    feats["dec_late"] = sum(d["type"]=="late" for d in decs)
+    feats["dec_variable"] = sum(d["type"]=="variable" for d in decs)
+    feats["dec_prolonged"] = sum(d["type"]=="prolonged" for d in decs)
+
+    if decs:
+        feats["dec_avg_depth"] = float(np.mean([d["depth"] for d in decs]))
+        feats["dec_max_depth"] = float(np.max([d["depth"] for d in decs]))
+        feats["dec_avg_duration"] = float(np.mean([d["duration"] for d in decs]))
+    else:
+        feats["dec_avg_depth"] = 0.0
+        feats["dec_max_depth"] = 0.0
+        feats["dec_avg_duration"] = 0.0
+
+    feats["dec_time_ratio"] = float(sum(d["duration"] for d in decs) / total_t)
+
+    feats["acc_count"] = len(accs)
+    feats["acc_rate"] = float(len(accs) / (total_t / 60))
+
+    feats["reactive"] = int(len(accs) >= 2)
+    feats["nonreactive"] = int(len(accs) < 2)
+
+    return feats
 def extract_features_for_window(fhr_clean, uc_clean, fhr_valid_mask, prefix):
-    """
-    Extract CTG summary features from one window.
-
-    Inputs:
-    - fhr_clean: cleaned fetal heart rate
-    - uc_clean: cleaned uterine contraction signal
-    - fhr_valid_mask: 1 for valid FHR, 0 for missing/invalid FHR
-    - prefix: feature name prefix, e.g. last5, last10, full
-    """
     feats = {}
 
+    # =========================================================
+    # EMPTY CASE
+    # =========================================================
     if len(fhr_clean) == 0:
         for name in [
             "fhr_mean",
@@ -343,7 +452,20 @@ def extract_features_for_window(fhr_clean, uc_clean, fhr_valid_mask, prefix):
         ]:
             feats[f"{prefix}_{name}"] = 0.0
 
+        # ✅ רק אפסים — בלי קריאה לפונקציה
+        for k in [
+            "dec_count", "dec_late", "dec_variable", "dec_prolonged",
+            "dec_avg_depth", "dec_max_depth", "dec_avg_duration",
+            "dec_time_ratio", "acc_count", "acc_rate",
+            "reactive", "nonreactive"
+        ]:
+            feats[f"{prefix}_{k}"] = 0.0
+
         return feats
+
+    # =========================================================
+    # NORMAL CASE
+    # =========================================================
 
     baseline = np.median(fhr_clean)
 
@@ -355,7 +477,7 @@ def extract_features_for_window(fhr_clean, uc_clean, fhr_valid_mask, prefix):
 
     n = max(len(fhr_clean), 1)
 
-    # FHR summary.
+    # FHR summary
     feats[f"{prefix}_fhr_mean"] = float(np.mean(fhr_clean))
     feats[f"{prefix}_fhr_std"] = float(np.std(fhr_clean))
     feats[f"{prefix}_fhr_min"] = float(np.min(fhr_clean))
@@ -366,28 +488,35 @@ def extract_features_for_window(fhr_clean, uc_clean, fhr_valid_mask, prefix):
     feats[f"{prefix}_fhr_p95"] = float(np.percentile(fhr_clean, 95))
     feats[f"{prefix}_fhr_slope"] = safe_slope(fhr_clean)
 
-    # Variability.
+    # Variability
     feats[f"{prefix}_stv"] = stv(fhr_clean)
     feats[f"{prefix}_ltv"] = ltv(fhr_clean)
 
-    # Event-like counts.
+    # Events
     feats[f"{prefix}_accelerations"] = int(acc_count)
     feats[f"{prefix}_decelerations"] = int(dec_count)
     feats[f"{prefix}_acceleration_ratio"] = float(acc_count / n)
     feats[f"{prefix}_deceleration_ratio"] = float(dec_count / n)
 
-    # UC summary.
+    # UC
     feats[f"{prefix}_uc_mean"] = float(np.mean(uc_clean))
     feats[f"{prefix}_uc_std"] = float(np.std(uc_clean))
     feats[f"{prefix}_uc_max"] = float(np.max(uc_clean))
     feats[f"{prefix}_uc_activity_ratio"] = float(np.mean(uc_clean > 0))
 
-    # Signal quality.
+    # Signal quality
     feats[f"{prefix}_missing_signal_pct"] = missing_signal_pct
     feats[f"{prefix}_valid_fhr_ratio"] = valid_fhr_ratio
 
-    return feats
+    # =========================================================
+    # ADD CLINICAL FEATURES ✅ (רק כאן!)
+    # =========================================================
+    clinical = clinical_features(fhr_clean, uc_clean)
 
+    for k, v in clinical.items():
+        feats[f"{prefix}_{k}"] = v
+
+    return feats
 
 def extract_ctg_multi_window_features(fhr_raw, uc_raw):
     """
@@ -539,7 +668,30 @@ def print_danger_only_evaluation(y_true, y_prob, threshold, title):
         "roc_auc": None if roc_auc is None else float(roc_auc),
     }
 
+# ============================================================
+# AUGMENTATION (ADD HERE)
+# ============================================================
 
+def augment_minority_class(X, y, factor=4, random_state=42):
+    np.random.seed(random_state)
+
+    X = np.array(X)
+    y = np.array(y)
+
+    X_normal = X[y == 0]
+    X_danger = X[y == 1]
+
+    if len(X_danger) == 0:
+        return X, y
+
+    X_danger_aug = np.repeat(X_danger, factor, axis=0)
+    y_danger_aug = np.ones(len(X_danger_aug), dtype=int)
+
+    X_new = np.vstack([X_normal, X_danger_aug])
+    y_new = np.concatenate([np.zeros(len(X_normal)), y_danger_aug])
+
+    idx = np.random.permutation(len(X_new))
+    return X_new[idx], y_new[idx].astype(int)
 def print_threshold_table(y_true, y_prob):
     """
     Analysis only.
@@ -662,6 +814,13 @@ X_train, X_val, y_train, y_val = train_test_split(
     stratify=y_temp,
     random_state=RANDOM_STATE,
 )
+# =========================
+# APPLY AUGMENTATION HERE
+# =========================
+X_train, y_train = augment_minority_class(X_train, y_train, factor=4)
+
+print("\n--- Augmentation Applied ---")
+print("Train class counts after augmentation:", np.bincount(y_train.astype(int)))
 
 print("\nSplit summary:")
 print(f"Train class counts: {np.bincount(y_train)}")
@@ -842,3 +1001,60 @@ print("2. Reads metadata from dataset/info for the matching record ID.")
 print("3. Adds missing indicators exactly as in training.")
 print("4. Orders features exactly according to xgboost_stats.json['feature_names'].")
 print("5. Loads xgboost_model.joblib and applies the saved threshold.")
+
+
+
+
+
+
+
+def print_ctg_analysis(fhr, uc, prediction, probability):
+    decs = detect_decelerations_clinical(fhr, uc)
+    accs = detect_accelerations_clinical(fhr)
+
+    print("\n======================================")
+    print("         FETAL STATUS ANALYSIS")
+    print("======================================\n")
+
+    # 🔴 החלטת מודל
+    status = "⚠️ DANGER" if prediction == 1 else "✅ NORMAL"
+    print(f"Prediction: {status}")
+    print(f"Confidence: {probability:.3f}\n")
+
+    # 🔵 סיכום מהיר
+    print("Key Findings:")
+
+    if len(decs) > 0:
+        late = sum(d["type"] == "late" for d in decs)
+        prolonged = sum(d["type"] == "prolonged" for d in decs)
+
+        if late > 0:
+            print(f"- {late} late decelerations detected")
+        if prolonged > 0:
+            print(f"- {prolonged} prolonged decelerations")
+
+    if len(accs) < 2:
+        print("- Non-reactive (low accelerations)")
+
+    print()
+
+    # 🟡 האטות
+    print("Decelerations:")
+    print(f"- Total: {len(decs)}")
+    print(f"- Late: {sum(d['type']=='late' for d in decs)}")
+    print(f"- Variable: {sum(d['type']=='variable' for d in decs)}")
+    print(f"- Prolonged: {sum(d['type']=='prolonged' for d in decs)}")
+
+    if len(decs) > 0:
+        print("\nDetails:")
+        for i, d in enumerate(decs[:5]):  # רק 5 ראשונים
+            print(f"  #{i+1} | duration={d['duration']:.1f}s | depth={d['depth']:.1f} | type={d['type']}")
+
+    print()
+
+    # 🟢 האצות
+    print("Accelerations:")
+    print(f"- Count: {len(accs)}")
+    print(f"- Reactive: {'Yes' if len(accs) >= 2 else 'No'}\n")
+
+    print("======================================\n")
