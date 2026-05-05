@@ -34,7 +34,7 @@ PH_FILE = DATASET_DIR / "ph_levels_with_be_risk_filled.csv"
 
 FS = 4
 RANDOM_STATE = 42
-TARGET_RECALL = 0.85
+TARGET_RECALL = 0.5
 MIN_THRESHOLD = 0.02
 MAX_THRESHOLD = 0.95
 
