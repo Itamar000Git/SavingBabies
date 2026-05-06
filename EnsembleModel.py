@@ -61,11 +61,11 @@ SEQ_LEN      = 4800   # 20 min @ 4 Hz — must match CNN / BiGRU training
 
 # Weights for the three models in the weighted-average ensemble.
 # Tune these to favour the model(s) that performed best on your validation set.
-W_XGB   = 0.35   # XGBoost
-W_CNN   = 0.35   # Multimodal CNN
-W_BIGRU = 0.30   # Multimodal BiGRU
+W_XGB   = 0.25   # XGBoost   — high recall but many false alarms, moderate weight
+W_CNN   = 0.60   # CNN       — best PR-AUC and precision by far, dominant weight
+W_BIGRU = 0.15   # BiGRU     — weakest model, low weight to avoid diluting CNN
 
-ENSEMBLE_THRESHOLD = 0.20   # Final decision threshold on the weighted-average probability
+ENSEMBLE_THRESHOLD = 0.32   # Tuned so that CNN signal alone can cross the threshold
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -385,23 +385,116 @@ Please provide:
 Keep the response under 150 words and use clinical language."""
 
 
+def generate_rule_based_explanation(meta, xgb_feats, probs, ensemble_prob):
+    """
+    Always-available explanation built from clinical rules applied to the
+    extracted features. No API key required.
+    """
+    findings = []
+    concerns = []
+    reassuring = []
+
+    # --- FHR baseline ---
+    fhr_mean = xgb_feats.get("full_fhr_mean", 140)
+    if fhr_mean < 110:
+        concerns.append(f"fetal bradycardia (mean FHR {fhr_mean:.0f} bpm)")
+    elif fhr_mean > 160:
+        concerns.append(f"fetal tachycardia (mean FHR {fhr_mean:.0f} bpm)")
+    else:
+        reassuring.append(f"normal baseline FHR ({fhr_mean:.0f} bpm)")
+
+    # --- Short-term variability ---
+    stv = xgb_feats.get("full_stv", 0)
+    if stv < 1.0:
+        concerns.append(f"markedly reduced short-term variability (STV={stv:.2f})")
+    elif stv < 2.0:
+        findings.append(f"mildly reduced STV ({stv:.2f})")
+    else:
+        reassuring.append(f"adequate STV ({stv:.2f})")
+
+    # --- Decelerations ---
+    dec_total    = int(xgb_feats.get("full_dec_count", 0))
+    dec_late     = int(xgb_feats.get("full_dec_late", 0))
+    dec_variable = int(xgb_feats.get("full_dec_variable", 0))
+    dec_prolonged= int(xgb_feats.get("full_dec_prolonged", 0))
+
+    if dec_late > 0:
+        concerns.append(f"{dec_late} late deceleration(s) — suggestive of uteroplacental insufficiency")
+    if dec_prolonged > 0:
+        concerns.append(f"{dec_prolonged} prolonged deceleration(s)")
+    if dec_variable > 0:
+        findings.append(f"{dec_variable} variable deceleration(s) — possible cord compression")
+    if dec_total == 0:
+        reassuring.append("no significant decelerations detected")
+
+    # --- Reactivity ---
+    reactive = int(xgb_feats.get("full_reactive", 0))
+    acc_count = int(xgb_feats.get("full_acc_count", 0))
+    if reactive:
+        reassuring.append(f"reactive trace ({acc_count} accelerations)")
+    else:
+        concerns.append(f"non-reactive trace (only {acc_count} acceleration(s))")
+
+    # --- Maternal risk factors ---
+    risk_factors = []
+    if meta.get("meta_diabetes", 0) == 1:     risk_factors.append("diabetes")
+    if meta.get("meta_hypertension", 0) == 1: risk_factors.append("hypertension")
+    if meta.get("meta_preeclampsia", 0) == 1: risk_factors.append("pre-eclampsia")
+    if meta.get("meta_meconium", 0) == 1:     risk_factors.append("meconium-stained liquor")
+    if meta.get("meta_pyrexia", 0) == 1:      risk_factors.append("pyrexia")
+    if meta.get("meta_liq_praecox", 0) == 1:  risk_factors.append("premature rupture of membranes")
+
+    gest = meta.get("meta_gestational_weeks", None)
+
+    # --- Confidence based on model agreement ---
+    model_vals = list(probs.values())
+    agreement  = sum(1 for p in model_vals if p >= 0.30) / len(model_vals)
+    if agreement >= 0.67:
+        confidence = "HIGH (majority of models agree)"
+    elif agreement >= 0.33:
+        confidence = "MEDIUM (partial model agreement)"
+    else:
+        confidence = "LOW (models disagree — borderline case)"
+
+    # --- Build narrative ---
+    lines = []
+    lines.append("  CTG Assessment:")
+
+    if concerns:
+        lines.append("  ⚠ Concerning findings: " + "; ".join(concerns) + ".")
+    if findings:
+        lines.append("  ℹ Additional findings: " + "; ".join(findings) + ".")
+    if reassuring:
+        lines.append("  ✓ Reassuring features: " + "; ".join(reassuring) + ".")
+    if risk_factors:
+        lines.append(f"  ⚠ Maternal risk factors: {', '.join(risk_factors)}.")
+    if gest and not np.isnan(float(gest)):
+        lines.append(f"  Gestational age: {int(float(gest))} weeks.")
+
+    lines.append(f"\n  Model scores  →  XGBoost: {probs['xgb']:.3f} | CNN: {probs['cnn']:.3f} | BiGRU: {probs['bigru']:.3f}")
+    lines.append(f"  Ensemble probability: {ensemble_prob:.3f}   |   Confidence: {confidence}")
+
+    return "\n".join(lines)
+
+
 def get_ai_explanation(record_id, meta, xgb_feats, probs, ensemble_prob,
                        ensemble_pred, true_label):
-    """Call Claude API to generate a clinical explanation. Returns None if unavailable."""
-    api_key = os.environ.get("ANTHROPIC_API_KEY", "")
+    """Call Groq API (LLaMA 3.3 70B) to generate a clinical explanation."""
+    api_key = os.environ.get("GROQ_API_KEY", "")
     if not api_key:
         return None
     try:
-        import anthropic
-        client  = anthropic.Anthropic(api_key=api_key)
+        from groq import Groq
+        client  = Groq(api_key=api_key)
         prompt  = _build_clinical_prompt(record_id, meta, xgb_feats, probs,
                                          ensemble_prob, ensemble_pred, true_label)
-        message = client.messages.create(
-            model="claude-sonnet-4-6",
-            max_tokens=300,
+        response = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
             messages=[{"role": "user", "content": prompt}],
+            max_tokens=300,
+            temperature=0.3,
         )
-        return message.content[0].text.strip()
+        return response.choices[0].message.content.strip()
     except Exception as e:
         return f"[AI explanation unavailable: {e}]"
 
@@ -639,25 +732,55 @@ evaluate(y_test, prob_bigru,    pred_bigru_bin, "BiGRU              (riskBE)")
 ensemble_metrics = evaluate(y_test, prob_ensemble, pred_ensemble, f"ENSEMBLE  (w={W_XGB:.2f}/{W_CNN:.2f}/{W_BIGRU:.2f}, thr={ENSEMBLE_THRESHOLD:.2f})")
 
 # ============================================================
-# AI EXPLANATIONS (Claude API)
+# EXPLANATIONS FOR RAISED ALARMS
+# Rule-based explanation runs always.
+# Claude AI explanation runs on top if ANTHROPIC_API_KEY is set.
 # ============================================================
 
-api_key = os.environ.get("ANTHROPIC_API_KEY", "")
-if not api_key:
-    print("\n[7] AI Explanations — set ANTHROPIC_API_KEY to enable Claude explanations.")
-else:
-    print(f"\n[7] Generating AI explanations for raised alarms ({int(pred_ensemble.sum())} cases)...")
-    print("-" * 57)
-    for i, rec in enumerate(test_records):
-        if pred_ensemble[i] == 0:
-            continue   # only explain alarms
+api_key       = os.environ.get("GROQ_API_KEY", "")
+use_groq      = bool(api_key)
+n_alarms      = int(pred_ensemble.sum())
 
-        probs_dict = {
-            "xgb":   float(prob_xgb[i]),
-            "cnn":   float(prob_cnn[i]),
-            "bigru": float(prob_bigru[i]),
-        }
-        explanation = get_ai_explanation(
+print(f"\n[7] Generating explanations for {n_alarms} raised alarm(s)...")
+if use_groq:
+    print("    Groq AI (LLaMA 3.3 70B) is active — will add natural-language interpretation.")
+else:
+    print("    Running rule-based explanation (set GROQ_API_KEY to add Groq AI).")
+print("=" * 57)
+
+for i, rec in enumerate(test_records):
+    if pred_ensemble[i] == 0:
+        continue
+
+    status = "TRUE POSITIVE ✓" if y_test[i] == 1 else "FALSE ALARM ✗"
+    probs_dict = {
+        "xgb":   float(prob_xgb[i]),
+        "cnn":   float(prob_cnn[i]),
+        "bigru": float(prob_bigru[i]),
+    }
+
+    ens_pct   = prob_ensemble[i] * 100
+    xgb_pct   = prob_xgb[i]   * 100
+    cnn_pct   = prob_cnn[i]   * 100
+    bigru_pct = prob_bigru[i] * 100
+
+    print(f"\n>>> Patient {rec['record_id']}  [{status}]")
+    print(f"    Risk probability: {ens_pct:.1f}%  "
+          f"(XGBoost: {xgb_pct:.1f}% | CNN: {cnn_pct:.1f}% | BiGRU: {bigru_pct:.1f}%)")
+
+    # --- Rule-based explanation (always shown) ---
+    rule_exp = generate_rule_based_explanation(
+        meta          = rec["meta"],
+        xgb_feats     = rec["xgb_feats"],
+        probs         = probs_dict,
+        ensemble_prob = float(prob_ensemble[i]),
+    )
+    print(rule_exp)
+
+    # --- Groq AI explanation (only if API key is set) ---
+    if use_groq:
+        print("\n  Groq AI interpretation (LLaMA 3.3 70B):")
+        ai_exp = get_ai_explanation(
             record_id     = rec["record_id"],
             meta          = rec["meta"],
             xgb_feats     = rec["xgb_feats"],
@@ -666,11 +789,11 @@ else:
             ensemble_pred = bool(pred_ensemble[i]),
             true_label    = bool(y_test[i]),
         )
-        status = "TP" if (pred_ensemble[i] == 1 and y_test[i] == 1) else "FP"
-        print(f"\nPatient {rec['record_id']} [{status}] — ensemble p={prob_ensemble[i]:.3f}")
-        if explanation:
-            print(explanation)
-        print("-" * 57)
+        if ai_exp:
+            for line in ai_exp.splitlines():
+                print(f"  {line}")
+
+    print("-" * 57)
 
 # ============================================================
 # SAVE RESULTS

@@ -26,6 +26,7 @@ def add_risk_column(input_csv, output_csv):
 # הרצת הקוד על הקובץ שלך
 if __name__ == "__main__":
     input_file = "ph_levels.csv"
-    output_file = "ph_levels_with_risk.csv"
+    output_file = "ph_levels
+    _with_risk.csv"
     
     add_risk_column(input_file, output_file)
