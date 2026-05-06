@@ -1,6 +1,8 @@
 from __future__ import annotations
 import os
 from contextlib import asynccontextmanager
+from dotenv import load_dotenv
+load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 

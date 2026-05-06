@@ -6,6 +6,7 @@ import ExplanationDashboard from './components/ExplanationDashboard'
 import LoadingOverlay from './components/LoadingOverlay'
 import ErrorBanner from './components/ErrorBanner'
 import { runPrediction } from './api/client'
+import ExplanationPanel from './components/ExplanationPanel'
 
 export default function App() {
   const [appState, setAppState] = useState('idle')
@@ -53,7 +54,7 @@ export default function App() {
             </div>
             <div className="right-panel">
               <ExplanationDashboard
-                explanation={result.explanation}
+                explanation={null}
                 signalFeatures={result.signal_features}
                 fhrEvents={result.fhr_events}
                 metadata={result.metadata}
@@ -61,6 +62,10 @@ export default function App() {
                 prediction={result.prediction}
               />
             </div>
+          </div>
+
+          <div className="explanation-full-width">
+            <ExplanationPanel explanation={result.explanation} />
           </div>
         </>
       )}
